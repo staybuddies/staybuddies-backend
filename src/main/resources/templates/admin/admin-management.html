@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Admin Management</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+          rel="stylesheet" crossorigin="anonymous">
+    <link th:href="@{/css/styles.css}" rel="stylesheet"/>
+</head>
+<body>
+<div class="layout">
+    <div th:insert="~{fragments/sidebar :: sidebar}"></div>
+
+    <main class="main-content">
+        <div class="container-xl">
+            <div class="card">
+                <div class="card-header d-flex align-items-center">
+                    <h2 class="h5 mb-0">Admin Management</h2>
+
+                    <div class="d-flex align-items-center ms-auto">
+                        <!-- Search form -->
+                        <form th:action="@{/admins}" method="get" class="d-flex align-items-center">
+                            <div class="input-group input-group-sm">
+                                <input type="text"
+                                       name="keyword"
+                                       th:value="${keyword}"
+                                       class="form-control form-control-sm"
+                                       placeholder="Search…"/>
+                                <button class="btn btn-outline-secondary btn-sm" type="submit">
+                                    Search
+                                </button>
+                            </div>
+                        </form>
+
+                        <!-- Add Admin -->
+                        <a th:href="@{/admins/new}"
+                           class="btn btn-primary btn-sm ms-3">
+                            Add Admin
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Table of admins -->
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover table-sm mb-0">
+                            <thead class="table-light">
+                            <tr>
+                                <th>Name</th>
+                                <th>Email</th>
+                                <th>Phone</th>
+                                <th>Created At</th>
+                                <th>Actions</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            <tr th:each="a : ${admins}">
+                                <td th:text="${a.name}">Name</td>
+                                <td th:text="${a.email}">email@example.com</td>
+                                <td th:text="${a.phone}">012-345-6789</td>
+                                <td th:text="${a.createdAt}">2025-07-15</td>
+                                <td>
+                                    <div class="dropdown position-static">
+                                        <button class="btn btn-sm btn-outline-secondary dropdown-toggle"
+                                                type="button"
+                                                data-bs-toggle="dropdown">
+                                            Actions
+                                        </button>
+                                        <ul class="dropdown-menu">
+                                            <li>
+                                                <a class="dropdown-item"
+                                                   th:href="@{/admins/view/{id}(id=${a.id})}">
+                                                    View
+                                                </a>
+                                            </li>
+                                            <li>
+                                                <a class="dropdown-item"
+                                                   th:href="@{/admins/edit/{id}(id=${a.id})}">
+                                                    Edit
+                                                </a>
+                                            </li>
+                                            <li>
+                                                <a class="dropdown-item text-danger"
+                                                   th:href="@{/admins/delete/{id}(id=${a.id})}"
+                                                   onclick="return confirm('Delete this admin?');">
+                                                    Delete
+                                                </a>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                </td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div> <!-- /.card -->
+        </div>   <!-- /.container-xl -->
+    </main>
+</div>     <!-- /.layout -->
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"
+        crossorigin="anonymous"></script>
+</body>
+</html>

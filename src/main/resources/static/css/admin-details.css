@@ -1,0 +1,85 @@
+/* ========================================
+   Admin Details Card
+   ======================================== */
+body {
+    background-color: #f4f6f8;
+    margin: 0;
+}
+
+.admin-details-card {
+    border-radius: 0.5rem;
+    overflow: hidden;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+    background: #fff;
+    padding: 2rem;
+    max-width: 800px;
+    margin: 2rem 0;
+}
+
+.admin-details-card .card-header {
+    background-color: #daf1dc;
+    border-bottom: 1px solid #d0e8cf;
+    padding: 1rem 1.5rem;
+}
+
+.admin-details-card h2 {
+    font-size: 1.5rem;
+    color: #315032;
+    margin: 0;
+}
+
+.admin-details-card .card-body {
+    padding: 1.5rem;
+    text-align: center;
+}
+
+.admin-details-card dl {
+    margin-bottom: 2rem;
+}
+
+.admin-details-card dt {
+    font-weight: 600;
+    color: #315032;
+}
+
+.admin-details-card dd {
+    margin-bottom: 0.75rem;
+    color: #333;
+}
+
+/* Profile Picture */
+
+.admin-profile-pic {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    border: 3px solid #daf1dc;
+    object-fit: cover;
+    margin-bottom: 1rem;
+    box-shadow: 0 0 6px rgba(0,0,0,0.15);
+}
+
+/* Action Buttons in Details */
+
+.admin-details-actions {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.admin-details-actions .btn {
+    min-width: 120px;
+    font-weight: bold;
+    border-radius: 0.375rem;
+}
+
+/* Hover styles for action buttons (if you want custom colors) */
+.admin-details-actions .btn-success:hover {
+    background-color: #45a049;
+}
+
+.admin-details-actions .btn-secondary:hover {
+    background-color: #546E7A;
+    color: #fff;
+}

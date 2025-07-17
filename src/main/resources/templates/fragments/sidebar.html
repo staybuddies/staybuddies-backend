@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<!-- this is your fragment definition -->
+<div th:fragment="sidebar">
+    <div class="sidebar">
+        <h2>Admin Panel</h2>
+        <ul>
+            <li><a th:href="@{/admin/dashboard}">Dashboard</a></li>
+            <li><a th:href="@{/admin/users}">User Management</a></li>
+            <li><a th:href="@{/admin/reports}">Report &amp; Moderation</a></li>
+            <li><a th:href="@{/admin/messages}">Message &amp; Monitoring</a></li>
+            <li><a th:href="@{/admin/analytics}">Analytics</a></li>
+            <li><a th:href="@{/admin/settings}">System Settings</a></li>
+        </ul>
+    </div>
+</div>
+</body>
+</html>
