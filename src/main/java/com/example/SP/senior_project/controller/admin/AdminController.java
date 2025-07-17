@@ -118,7 +118,6 @@ public class AdminController {
             admin = adminRepository.findById(adminRequest.getId())
                     .orElseThrow(() -> new RuntimeException("Admin not found"));
 
-            // ✅ Validate password
             if (!passwordEncoder.matches(adminRequest.getPassword(), admin.getPassword())) {
                 model.addAttribute("adminRequest", adminRequest);
                 model.addAttribute("id", admin.getId());
