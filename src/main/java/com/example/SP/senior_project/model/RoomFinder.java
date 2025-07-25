@@ -2,14 +2,11 @@ package com.example.SP.senior_project.model;
 
 import com.example.SP.senior_project.model.base.AbstractAuditableEntity;
 import jakarta.persistence.*;
-import lombok.Getter;
-import lombok.Setter;
-
+import lombok.Data;
 import java.time.LocalDate;
 
 @Entity
-@Getter
-@Setter
+@Data
 @Table(name = "room_finders")   // change table name to underscores
 public class RoomFinder extends AbstractAuditableEntity {
 
@@ -18,6 +15,12 @@ public class RoomFinder extends AbstractAuditableEntity {
 
     @Column(nullable = false, unique = true)
     private String email;
+
+    @Column(nullable = false)
+    private String password;
+
+    @Column(nullable = false)
+    private String phone;
 
     @Column(name = "join_date", nullable = false)
     private LocalDate joinDate;
