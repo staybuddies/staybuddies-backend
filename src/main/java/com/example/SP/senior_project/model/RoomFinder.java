@@ -3,6 +3,7 @@ package com.example.SP.senior_project.model;
 import com.example.SP.senior_project.model.base.AbstractAuditableEntity;
 import jakarta.persistence.*;
 import lombok.Data;
+
 import java.time.LocalDate;
 
 @Entity
@@ -38,4 +39,9 @@ public class RoomFinder extends AbstractAuditableEntity {
 
     @Column(name = "already_has_room", nullable = false)
     private boolean alreadyHasRoom;
+
+    @Column(nullable = false)
+    private boolean locationSharing = false;
+    @Column(nullable = false)
+    private boolean emailNotification = false;
 }

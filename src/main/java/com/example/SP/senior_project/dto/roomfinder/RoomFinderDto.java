@@ -1,8 +1,8 @@
-package com.example.SP.senior_project.dto.admin.roomfinder;
+package com.example.SP.senior_project.dto.roomfinder;
 
 import lombok.Data;
 
-// RoomFinderDto.java
+
 @Data
 public class RoomFinderDto {
     private Long    id;
@@ -12,6 +12,9 @@ public class RoomFinderDto {
     private String phone;
     private String  gender;
     private Integer age;
+    private String location;
     private String  university;
     private Boolean alreadyHasRoom;
+    private Boolean locationSharing;
+    private Boolean emailNotification;
 }

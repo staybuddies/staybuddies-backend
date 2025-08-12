@@ -6,4 +6,6 @@ import java.util.Optional;
 
 public interface RoomFinderRepository extends JpaRepository<RoomFinder, Long> {
     Optional<RoomFinder> findByEmail(String email);
+    boolean existsByEmail(String email);
+
 }

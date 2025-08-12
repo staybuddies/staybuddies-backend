@@ -1,8 +1,8 @@
-package com.example.SP.senior_project.dto.admin.roomfinder;
+package com.example.SP.senior_project.dto.roomfinder;
 
 import lombok.Data;
 
-// BehavioralDto.java
+
 @Data
 public class BehavioralDto {
     private Boolean locationSharing;

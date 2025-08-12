@@ -1,4 +1,4 @@
-package com.example.SP.senior_project.dto.admin.api.login;
+package com.example.SP.senior_project.dto.api.login;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;

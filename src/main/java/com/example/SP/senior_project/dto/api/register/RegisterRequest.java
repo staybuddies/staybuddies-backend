@@ -1,4 +1,4 @@
-package com.example.SP.senior_project.dto.admin.api.register;
+package com.example.SP.senior_project.dto.api.register;
 
 import lombok.Data;
 

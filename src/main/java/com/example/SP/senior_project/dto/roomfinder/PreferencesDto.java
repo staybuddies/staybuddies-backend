@@ -1,4 +1,4 @@
-package com.example.SP.senior_project.dto.admin.roomfinder;
+package com.example.SP.senior_project.dto.roomfinder;
 
 import lombok.Data;
 
@@ -8,5 +8,6 @@ public class PreferencesDto {
     private String gender;
     private Integer age;
     private String university;
+    private String location;
 }
 
