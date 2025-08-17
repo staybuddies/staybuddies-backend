@@ -2,23 +2,21 @@ package com.example.SP.senior_project.service;
 
 import com.example.SP.senior_project.repository.AdminRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.core.userdetails.User;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.core.userdetails.UserDetailsService;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.security.core.userdetails.*;
 import org.springframework.stereotype.Service;
 
 @Service("adminUserDetailsService")
 @RequiredArgsConstructor
 public class AdminUserDetailsService implements UserDetailsService {
-    private final AdminRepository adminRepository;
+    private final AdminRepository admins;
 
     @Override
-    public UserDetails loadUserByUsername(String email) {
-        var admin = adminRepository.findByEmail(email)
-                .orElseThrow(() -> new UsernameNotFoundException("Admin not found"));
-        return User.withUsername(admin.getEmail())
-                .password(admin.getPassword())
+    public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
+        var a = admins.findByEmail(email)
+                .orElseThrow(() -> new UsernameNotFoundException("No admin: " + email));
+
+        return User.withUsername(a.getEmail())
+                .password(a.getPassword())   // BCrypt
                 .roles("ADMIN")
                 .build();
     }

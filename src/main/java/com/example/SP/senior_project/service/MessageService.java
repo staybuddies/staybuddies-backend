@@ -27,6 +27,7 @@ public class MessageService {
     private final MessageThreadRepository threadRepo;
     private final MessageRepository messageRepo;
 
+    /* ---------------------- list my conversations ---------------------- */
     @Transactional(readOnly = true)
     public List<ConversationDto> threadsFor(String email) {
         RoomFinder me = userRepo.findByEmail(email)
@@ -37,14 +38,12 @@ public class MessageService {
     }
 
     /* ---------------------- helpers ---------------------- */
-
     private RoomFinder me(String email) {
         return userRepo.findByEmail(email)
                 .orElseThrow(() -> new UsernameNotFoundException(email));
     }
 
-    /* ---------------------- list threads ---------------------- */
-
+    /* ---------------------- list threads (with eager user info) ---------------------- */
     @Transactional(readOnly = true)
     public List<ConversationDto> list(String email) {
         var me = me(email);
@@ -52,7 +51,7 @@ public class MessageService {
         return threads.stream().map(t -> toConversationDto(t, me)).toList();
     }
 
-    /* ---------------------- ensure/get thread by EMAIL ---------------------- */
+    /* ---------------------- ensure/get thread by OTHER USER ID (using my email) ---------------------- */
     @Transactional
     public Long ensureThreadByEmail(String myEmail, Long otherId) {
         RoomFinder me = userRepo.findByEmail(myEmail)
@@ -60,8 +59,8 @@ public class MessageService {
         RoomFinder other = userRepo.findById(otherId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
 
-        Long a = Math.min(me.getId(), other.getId());
-        Long b = Math.max(me.getId(), other.getId());
+        long a = Math.min(me.getId(), other.getId());
+        long b = Math.max(me.getId(), other.getId());
 
         return threadRepo.findBetween(a, b)
                 .map(MessageThread::getId)
@@ -73,31 +72,29 @@ public class MessageService {
                 });
     }
 
-
-    /* ---------------------- NEW: ensure/get thread by IDS ---------------------- */
-
-    // snippets only
+    /* ---------------------- ensure/get thread by two IDs ---------------------- */
     @Transactional(readOnly = true)
     public Long findExistingThreadId(Long aId, Long bId) {
-        return threadRepo.findBetween(aId, bId).map(MessageThread::getId).orElse(null);
+        long a = Math.min(aId, bId);
+        long b = Math.max(aId, bId);
+        return threadRepo.findBetween(a, b).map(MessageThread::getId).orElse(null);
     }
 
     @Transactional
     public Long ensureThread(Long aId, Long bId) {
-        return threadRepo.findBetween(aId, bId)
+        long a = Math.min(aId, bId);
+        long b = Math.max(aId, bId);
+        return threadRepo.findBetween(a, b)
                 .map(MessageThread::getId)
                 .orElseGet(() -> {
-                    var a = userRepo.findById(aId).orElseThrow();
-                    var b = userRepo.findById(bId).orElseThrow();
                     var t = new MessageThread();
-                    t.setUser1(a);
-                    t.setUser2(b);
+                    t.setUser1(userRepo.getReferenceById(a));
+                    t.setUser2(userRepo.getReferenceById(b));
                     return threadRepo.save(t).getId();
                 });
     }
 
-    /* ---------------------- messages in a thread ---------------------- */
-
+    /* ---------------------- messages in a thread I participate in ---------------------- */
     @Transactional(readOnly = true)
     public List<MessageDto> messages(String myEmail, Long threadId) {
         RoomFinder me = userRepo.findByEmail(myEmail)
@@ -113,7 +110,6 @@ public class MessageService {
                 .toList();
     }
 
-
     @Transactional
     public MessageDto send(String myEmail, Long threadId, String content) {
         if (content == null || content.isBlank())
@@ -121,14 +117,11 @@ public class MessageService {
 
         RoomFinder me = userRepo.findByEmail(myEmail)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED));
-
         MessageThread t = threadRepo.findById(threadId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
 
         if (!participant(t, me.getId())) {
-            // Tell controller who the other participant is so the client can resync
-            Long other = t.getUser1().getId().equals(me.getId()) ? t.getUser2().getId()
-                    : t.getUser1().getId();
+            Long other = t.getUser1().getId().equals(me.getId()) ? t.getUser2().getId() : t.getUser1().getId();
             throw new ThreadNotOwned(other);
         }
 
@@ -141,7 +134,26 @@ public class MessageService {
         return toMessageDto(m, me.getId());
     }
 
+    /* ---------------------- mark read ---------------------- */
+    @Transactional
+    public int markRead(String myEmail, Long threadId) {
+        RoomFinder me = userRepo.findByEmail(myEmail)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED));
 
+        MessageThread t = threadRepo.findById(threadId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+
+        if (!participant(t, me.getId())) {
+            Long other = t.getUser1().getId().equals(me.getId())
+                    ? t.getUser2().getId() : t.getUser1().getId();
+            throw new ThreadNotOwned(other);
+        }
+
+        // Requires MessageRepository.markReadByOther(...)
+        return messageRepo.markReadByOther(threadId, me.getId());
+    }
+
+    /* ---------------------- mapping helpers ---------------------- */
     private boolean participant(MessageThread t, Long uid) {
         return t.getUser1().getId().equals(uid) || t.getUser2().getId().equals(uid);
     }
@@ -152,7 +164,7 @@ public class MessageService {
         long unread = messageRepo.countByThreadAndReadByOtherFalseAndSender_IdNot(t, me.getId());
 
         var dto = new ConversationDto();
-        dto.setId(t.getId());                          // NUMERIC ID
+        dto.setId(t.getId());
         dto.setOtherId(other.getId());
         dto.setOtherName(other.getName());
         dto.setOtherGender(other.getGender());
@@ -174,11 +186,11 @@ public class MessageService {
         return dto;
     }
 
+    /* ---------------------- error type used by controller ---------------------- */
     @Getter
     @Setter
     public static class ThreadNotOwned extends RuntimeException {
         private final Long otherUserId;
         public ThreadNotOwned(Long otherUserId) { this.otherUserId = otherUserId; }
     }
-
 }

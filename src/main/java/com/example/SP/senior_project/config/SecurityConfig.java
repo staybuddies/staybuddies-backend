@@ -1,20 +1,16 @@
 package com.example.SP.senior_project.config;
 
 import com.example.SP.senior_project.config.jwt.JwtAuthenticationFilter;
-import com.example.SP.senior_project.service.RoomFinderService;
-import com.example.SP.senior_project.service.RoomFinderUserDetailsService;
-import jakarta.servlet.http.HttpServletResponse;
-import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;          // <-- add this import
 import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.ProviderManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.Customizer;
-import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -30,104 +26,115 @@ import java.util.List;
 
 @Configuration
 @EnableWebSecurity
-@RequiredArgsConstructor
 public class SecurityConfig {
 
-    @Qualifier("roomFinderUserDetailsService")
-    private final UserDetailsService userService;
-    @Autowired
-    private final PasswordEncoder passwordEncoder;
-    @Autowired
-    private JwtAuthenticationFilter jwtAuthenticationFilter;
-    @Qualifier("adminUserDetailsService")
+    private final UserDetailsService roomFinderDetails;
     private final UserDetailsService adminDetails;
+    private final PasswordEncoder passwordEncoder;
+    private final JwtAuthenticationFilter jwtAuthenticationFilter;
 
-    @Bean
-    public DaoAuthenticationProvider authenticationProvider() {
-        DaoAuthenticationProvider auth = new DaoAuthenticationProvider();
-        auth.setUserDetailsService(userService);
-        auth.setPasswordEncoder(passwordEncoder);
-        return auth;
+    public SecurityConfig(
+            @Qualifier("roomFinderUserDetailsService") UserDetailsService roomFinderDetails,
+            @Qualifier("adminUserDetailsService")      UserDetailsService adminDetails,
+            PasswordEncoder passwordEncoder,
+            JwtAuthenticationFilter jwtAuthenticationFilter
+    ) {
+        this.roomFinderDetails = roomFinderDetails;
+        this.adminDetails = adminDetails;
+        this.passwordEncoder = passwordEncoder;
+        this.jwtAuthenticationFilter = jwtAuthenticationFilter;
     }
 
-//    @Bean
-//    public DaoAuthenticationProvider adminAuthProvider() {
-//        var p = new DaoAuthenticationProvider();
-//        p.setUserDetailsService(adminDetails);
-//        p.setPasswordEncoder(passwordEncoder);
-//        return p;
-//    }
-
-
+    /* --------- providers --------- */
     @Bean
-    public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
-        return config.getAuthenticationManager();
+    public DaoAuthenticationProvider roomFinderAuthProvider() {
+        var p = new DaoAuthenticationProvider();
+        p.setUserDetailsService(roomFinderDetails);
+        p.setPasswordEncoder(passwordEncoder);
+        return p;
     }
 
+    @Bean
+    public DaoAuthenticationProvider adminAuthProvider() {
+        var p = new DaoAuthenticationProvider();
+        p.setUserDetailsService(adminDetails);
+        p.setPasswordEncoder(passwordEncoder);
+        return p;
+    }
+
+    /* --------- per-chain AuthenticationManagers (named) --------- */
+    @Bean("apiAuthManager")
+    @Primary                                          // <-- make ONE manager primary
+    public AuthenticationManager apiAuthManager() {
+        return new ProviderManager(List.of(roomFinderAuthProvider()));
+    }
+
+    @Bean("adminAuthManager")
+    public AuthenticationManager adminAuthManager() {
+        return new ProviderManager(List.of(adminAuthProvider()));
+    }
+
+    /* --------- CORS for API --------- */
     @Bean
     CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration cfg = new CorsConfiguration();
+        var cfg = new CorsConfiguration();
         cfg.setAllowedOrigins(List.of("http://localhost:5173"));
-        cfg.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
-        cfg.setAllowedHeaders(List.of("Authorization", "Content-Type", "Accept"));
+        cfg.setAllowedMethods(List.of("GET","POST","PUT","PATCH","DELETE","OPTIONS"));
+        cfg.setAllowedHeaders(List.of("Authorization","Content-Type","Accept"));
         cfg.setAllowCredentials(true);
-
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", cfg);
-        return source;
+        var src = new UrlBasedCorsConfigurationSource();
+        src.registerCorsConfiguration("/**", cfg);
+        return src;
     }
 
+    /* --------- API chain (/api/**) --------- */
     @Bean
     @Order(1)
     public SecurityFilterChain apiSecurityFilterChain(HttpSecurity http) throws Exception {
-        http
-                .securityMatcher("/api/**")
+        http.securityMatcher("/api/**")
                 .cors(Customizer.withDefaults())
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.POST, "/api/v1/room-finder").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/authenticate").permitAll()
-                        .requestMatchers("/api/v1/matches/**").authenticated()
-                        .requestMatchers("/api/v1/messages/**").authenticated()
+                        .requestMatchers("/api/v1/matches/**", "/api/v1/messages/**").authenticated()
                         .requestMatchers(HttpMethod.OPTIONS, "/api/**").permitAll()
-
-                        // protect the rest of your API
+                        .requestMatchers("/files/**").permitAll()
                         .requestMatchers("/api/v1/room-finder/**").authenticated()
                         .anyRequest().authenticated()
                 )
-                .exceptionHandling(e -> e.authenticationEntryPoint((req, res, ex) -> {
-                    res.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-                    res.setContentType("application/json");
-                    res.getWriter().write("{\"error\":\"Unauthorized\"}");
-                }))
+                .authenticationManager(apiAuthManager())  // use API manager explicitly
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
 
-
+    /* --------- MVC chain (admin pages) --------- */
     @Bean
     @Order(2)
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        http
-                .authenticationProvider(authenticationProvider())
+    public SecurityFilterChain mvcSecurityFilterChain(HttpSecurity http) throws Exception {
+        http.securityMatcher("/login", "/register", "/logout",
+                        "/admins/**", "/css/**", "/js/**", "/images/**")
+                .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/login", "/register", "/css/**", "/js/**")
-                        .permitAll()
+                        .requestMatchers("/login", "/register", "/css/**", "/js/**", "/images/**").permitAll()
                         .requestMatchers("/admins/**").hasRole("ADMIN")
-                        .anyRequest()
-                        .permitAll()
+                        .anyRequest().permitAll()
                 )
+                .authenticationManager(adminAuthManager()) // use ADMIN manager explicitly
                 .formLogin(form -> form
                         .loginPage("/login")
+                        .loginProcessingUrl("/login")
                         .defaultSuccessUrl("/admins", true)
+                        .failureUrl("/login?error")
                         .permitAll()
                 )
                 .logout(logout -> logout
                         .logoutUrl("/logout")
                         .logoutSuccessUrl("/login?logout")
                 );
+
         return http.build();
     }
 }

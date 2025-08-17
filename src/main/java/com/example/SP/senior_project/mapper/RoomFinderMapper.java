@@ -2,32 +2,29 @@ package com.example.SP.senior_project.mapper;
 
 import com.example.SP.senior_project.dto.roomfinder.BehavioralDto;
 import com.example.SP.senior_project.dto.roomfinder.PreferencesDto;
-import com.example.SP.senior_project.model.RoomFinder;
 import com.example.SP.senior_project.dto.roomfinder.RoomFinderDto;
 import com.example.SP.senior_project.dto.roomfinder.RoomFinderUpdateDto;
+import com.example.SP.senior_project.model.RoomFinder;
 import org.mapstruct.*;
+import org.springframework.beans.factory.annotation.Qualifier;
 
-@Mapper(componentModel = "spring")
+@Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
 public interface RoomFinderMapper {
 
-// Never send password to the client
-    @Mapping(target = "password", ignore = true)
-    RoomFinderDto toDto(RoomFinder entity);
+    @Qualifier("roomFinderMapperImpl")
+    RoomFinderDto toDto(RoomFinder rf);
 
-    // Partial update: ignore nulls so we don't overwrite existing fields
-    @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
-    void updateFromDto(RoomFinderUpdateDto dto, @MappingTarget RoomFinder entity);
-
-    // Preferences mapping
     PreferencesDto toPreferencesDto(RoomFinder rf);
 
-    @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
-    void updateFromPreferences(PreferencesDto dto, @MappingTarget RoomFinder rf);
-
-    // Behavioral mapping
     BehavioralDto toBehavioralDto(RoomFinder rf);
 
+    // -------- Update mappers (DTO -> Entity), ignore nulls so we don't clobber fields --------
     @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
-    void updateFromBehavioral(BehavioralDto dto, @MappingTarget RoomFinder rf);
-}
+    void updateFromDto(RoomFinderUpdateDto src, @MappingTarget RoomFinder dest);
 
+    @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
+    void updateFromPreferences(PreferencesDto src, @MappingTarget RoomFinder dest);
+
+    @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
+    void updateFromBehavioral(BehavioralDto src, @MappingTarget RoomFinder dest);
+}

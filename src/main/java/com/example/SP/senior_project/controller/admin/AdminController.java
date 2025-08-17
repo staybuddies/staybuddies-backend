@@ -77,38 +77,6 @@ public class AdminController {
         return "admin/admin-form";
     }
 
-    //    @PostMapping("/save")
-//    public String save(@ModelAttribute AdminRequest adminRequest) {
-//
-//        Admin admin;
-//
-//        if (adminRequest.getId() != null) {
-//            // existing admin
-//            admin = adminRepository.findById(adminRequest.getId())
-//                    .orElseThrow(() -> new RuntimeException("Admin not found"));
-//        } else {
-//            admin = new Admin();
-//        }
-//        admin.setName(adminRequest.getName());
-//        admin.setEmail(adminRequest.getEmail());
-//        admin.setPhone(adminRequest.getPhone());
-//        if (adminRequest.getPassword() != null && !adminRequest.getPassword().isBlank()) {
-//            String hashed = passwordEncoder.encode(adminRequest.getPassword());
-//            admin.setPassword(hashed);
-//        }
-//        admin = adminRepository.save(admin);
-//
-//        // 2. Handle file upload if file exists
-//        if (adminRequest.getFile() != null && !adminRequest.getFile().isEmpty()) {
-//            fileService.handleFileUpload(
-//                    adminRequest.getFile(),
-//                    FileType.ADMIN_PROFILE, // your enum value
-//                    admin.getId(),
-//                    "s3" // or "local" depending on your app config
-//            );
-//        }
-//        return "redirect:/admins";
-//    }
     @PostMapping("/save")
     public String save(@ModelAttribute AdminRequest adminRequest, Model model) {
         Admin admin;

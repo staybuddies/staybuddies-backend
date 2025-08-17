@@ -14,6 +14,10 @@ public class RoomFinderUpdateDto {
     private Integer age;
     private String location;
     private String university;
+
+    private String major;
+    private String bio;
+
     private Boolean alreadyHasRoom;
     private Boolean locationSharing;
     private Boolean emailNotification;

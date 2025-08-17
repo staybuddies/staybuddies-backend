@@ -12,4 +12,7 @@ public interface QuizResponseRepository extends JpaRepository<QuizResponse, Long
 
     @EntityGraph(attributePaths = {"roomFinder","answers"})
     List<QuizResponse> findAll();
+
+    Optional<QuizResponse> findByRoomFinder_Id(Long id);
+
 }

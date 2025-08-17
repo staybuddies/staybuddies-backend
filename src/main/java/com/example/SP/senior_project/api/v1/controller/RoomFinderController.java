@@ -80,7 +80,6 @@ public class RoomFinderController {
         rf.setLocation(dto.getLocation());
         rf.setAlreadyHasRoom(Boolean.TRUE.equals(dto.getAlreadyHasRoom()));
         rf.setPassword(passwordEncoder.encode(dto.getPassword()));
-        rf.setEmailNotification(Boolean.TRUE.equals(dto.getEmailNotification()));
         rf.setLocationSharing(Boolean.TRUE.equals(dto.getLocationSharing()));
 
         rf = repo.save(rf);
