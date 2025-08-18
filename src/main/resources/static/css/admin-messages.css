@@ -1,0 +1,72 @@
+/* scaffold styles for messages/monitoring */
+.toolbar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+
+.toolbar input {
+    flex: 1;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    background: #fff;
+}
+
+.convos {
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    gap: 16px;
+}
+
+.thread-list {
+    background: #fff;
+    border-radius: 12px;
+    padding: 12px;
+    box-shadow: var(--shadow);
+    max-height: 70vh;
+    overflow: auto;
+}
+
+.thread-item {
+    padding: 10px;
+    border-radius: 10px;
+}
+
+.thread-item + .thread-item {
+    margin-top: 6px;
+}
+
+.thread-item:hover {
+    background: #f6f6f6;
+}
+
+.chat {
+    background: #fff;
+    border-radius: 12px;
+    padding: 12px;
+    box-shadow: var(--shadow);
+    min-height: 60vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.chat-body {
+    flex: 1;
+    overflow: auto;
+    padding: 6px;
+}
+
+.chat-input {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.chat-input input {
+    flex: 1;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 10px;
+}

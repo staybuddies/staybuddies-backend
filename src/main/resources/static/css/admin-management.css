@@ -1,0 +1,32 @@
+.search {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+
+.search input {
+    flex: 1;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    background: #fff;
+}
+
+.row-actions a {
+    margin-right: 10px;
+}
+
+.row-actions a.danger {
+    color: #c62828;
+}
+
+.pager {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 12px;
+}
+
+.pager a {
+    text-decoration: none;
+}

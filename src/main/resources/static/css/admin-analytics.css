@@ -1,0 +1,28 @@
+.analytics-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(280px, 1fr));
+    gap: 16px;
+}
+
+.widget {
+    background: #fff;
+    border-radius: 12px;
+    padding: 16px;
+    box-shadow: var(--shadow);
+}
+
+.widget h3 {
+    margin: 0 0 10px;
+    font-size: 16px;
+    color: #444;
+}
+
+.widget .placeholder {
+    height: 220px;
+    border: 2px dashed #e5e5e5;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #999;
+}

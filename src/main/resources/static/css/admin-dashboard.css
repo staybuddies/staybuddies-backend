@@ -1,0 +1,41 @@
+/* Dashboard header strip */
+.dashboard-header {
+    background: #fff;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+/* KPI cards */
+.cards {
+    display: grid;
+    grid-template-columns:repeat(3, minmax(220px, 1fr));
+    gap: 16px;
+}
+
+.card.kpi {
+    background: #fff;
+    padding: 18px;
+    border-radius: 14px;
+    box-shadow: var(--shadow);
+}
+
+.card.kpi h3 {
+    margin: 0 0 8px;
+    font-size: 16px;
+    color: #444;
+}
+
+.card.kpi p {
+    font-size: 28px;
+    font-weight: 700;
+    margin: 0;
+    color: var(--ink);
+}
+
+/* Optional band on top of card */
+.kpi .stats-top {
+    height: 6px;
+    background: var(--teal-200);
+    margin: -18px -18px 12px;
+    border-top-left-radius: 14px;
+    border-top-right-radius: 14px;
+}

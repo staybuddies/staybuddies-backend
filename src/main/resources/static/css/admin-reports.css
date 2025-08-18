@@ -1,0 +1,40 @@
+/* scaffold styles for reports */
+.filters {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+
+.filters select, .filters input {
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    background: #fff;
+}
+
+.queue {
+    display: grid;
+    gap: 12px;
+}
+
+.report-card {
+    background: #fff;
+    border-radius: 12px;
+    padding: 16px;
+    box-shadow: var(--shadow);
+}
+
+.report-card h4 {
+    margin: 0 0 6px;
+}
+
+.report-meta {
+    color: #666;
+    font-size: .95rem;
+    margin-bottom: 8px;
+}
+
+.actions {
+    display: flex;
+    gap: 10px;
+}

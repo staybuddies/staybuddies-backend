@@ -1,0 +1,13 @@
+.settings-form {
+    max-width: 720px;
+}
+
+.settings-form .row {
+    margin-bottom: 12px;
+}
+
+.settings-form .actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 8px;
+}

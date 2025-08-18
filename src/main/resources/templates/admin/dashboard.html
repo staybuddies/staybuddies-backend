@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Dashboard</title>
+    <link rel="stylesheet" th:href="@{/css/admin-dashboard.css}">
+    <link rel="stylesheet" th:href="@{/css/styles.css}">
+</head>
+<body>
+<div th:replace="fragments/sidebar :: sidebar"></div>
+<main class="main">
+    <div class="page-head"><h1>Dashboard</h1></div>
+    <section class="cards">
+        <div class="card kpi"><h3>Total Admins</h3><p th:text="${totalAdmins}">0</p></div>
+        <div class="card kpi"><h3>New Reports</h3><p th:text="${newReports}">0</p></div>
+        <div class="card kpi"><h3>Active Conversations</h3><p th:text="${activeConvos}">0</p></div>
+    </section>
+</main>
+</body>
+</html>

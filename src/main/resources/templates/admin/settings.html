@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>System Settings</title>
+    <link rel="stylesheet" th:href="@{/css/admin-settings.css}">
+    <link rel="stylesheet" th:href="@{/css/styles.css}">
+</head>
+<body>
+<div th:replace="fragments/sidebar :: sidebar"></div>
+<main class="main">
+    <div class="page-head"><h1>System Settings</h1></div>
+    <form class="card form">
+        <div class="row">
+            <label>Site Name</label>
+            <input type="text" placeholder="StayBuddies Admin">
+        </div>
+        <div class="row">
+            <label>Support Email</label>
+            <input type="email" placeholder="support@example.com">
+        </div>
+        <div class="actions">
+            <button class="btn primary" type="button">Save</button>
+        </div>
+    </form>
+</main>
+</body>
+</html>
