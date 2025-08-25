@@ -5,7 +5,6 @@ import jakarta.persistence.*;
 import lombok.Data;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 
 @Entity
 @Data
@@ -51,6 +50,11 @@ public class RoomFinder extends AbstractAuditableEntity {
 
     @Column(length = 255)
     private String major;
+    // for email verification
+    @Column
+    private String schoolEmail;
+    @Column(nullable = false)
+    private boolean schoolEmailVerified = false;
 
 }
 

@@ -35,4 +35,7 @@ build/
 # Ignore Spring Boot application config
 src/main/resources/application.properties
 
+.mail-override.properties
+
+
 

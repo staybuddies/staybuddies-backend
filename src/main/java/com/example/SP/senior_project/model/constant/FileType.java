@@ -5,6 +5,6 @@ public enum FileType {
 
     STUDENT_ID_FRONT,
     STUDENT_ID_BACK,
-    STUDENT_SELFIE,
+    STUDENT_ID_SELFIE,
 
     }

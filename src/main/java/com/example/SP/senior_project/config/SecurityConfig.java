@@ -35,7 +35,7 @@ public class SecurityConfig {
 
     public SecurityConfig(
             @Qualifier("roomFinderUserDetailsService") UserDetailsService roomFinderDetails,
-            @Qualifier("adminUserDetailsService")      UserDetailsService adminDetails,
+            @Qualifier("adminUserDetailsService") UserDetailsService adminDetails,
             PasswordEncoder passwordEncoder,
             JwtAuthenticationFilter jwtAuthenticationFilter
     ) {
@@ -79,8 +79,8 @@ public class SecurityConfig {
     CorsConfigurationSource corsConfigurationSource() {
         var cfg = new CorsConfiguration();
         cfg.setAllowedOrigins(List.of("http://localhost:5173"));
-        cfg.setAllowedMethods(List.of("GET","POST","PUT","PATCH","DELETE","OPTIONS"));
-        cfg.setAllowedHeaders(List.of("Authorization","Content-Type","Accept"));
+        cfg.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
+        cfg.setAllowedHeaders(List.of("Authorization", "Content-Type", "Accept"));
         cfg.setAllowCredentials(true);
         var src = new UrlBasedCorsConfigurationSource();
         src.registerCorsConfiguration("/**", cfg);
@@ -98,6 +98,8 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.POST, "/api/v1/room-finder").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/authenticate").permitAll()
+                        .requestMatchers("/api/v1/verify-email/**").permitAll()              // <-- change here
+                        .requestMatchers("/api/v1/verifications/student-id/**").authenticated()
                         .requestMatchers("/api/v1/matches/**", "/api/v1/messages/**").authenticated()
                         .requestMatchers(HttpMethod.OPTIONS, "/api/**").permitAll()
                         .requestMatchers("/files/**").permitAll()
