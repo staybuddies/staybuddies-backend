@@ -1,15 +1,44 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
 <head>
-    <title>Message & Monitoring</title>
-    <link rel="stylesheet" th:href="@{/css/admin-messages.css}">
-    <link rel="stylesheet" th:href="@{/css/styles.css}">
+    <meta charset="UTF-8">
+    <title>Admin • Message & Monitoring</title>
+    <link rel="stylesheet" th:href="@{/static.css/styles.css}">
+    <link rel="stylesheet" th:href="@{/static.css/admin-messages.css}">
 </head>
 <body>
-<div th:replace="fragments/sidebar :: sidebar"></div>
-<main class="main">
-    <div class="page-head"><h1>Message & Monitoring</h1></div>
-    <p>Coming soon: live inbox, conversation search, flags.</p>
-</main>
+<div class="layout">
+    <div th:replace="fragments/sidebar :: sidebar"></div>
+
+    <main class="content">
+        <header class="page-header">
+            <h1>Message & Monitoring</h1>
+        </header>
+
+        <section class="panel">
+            <form class="toolbar" method="get">
+                <input type="text" name="q" placeholder="Search conversations by user/email..." th:value="${q}">
+                <button class="btn" type="submit">Search</button>
+            </form>
+
+            <div class="split">
+                <aside class="list">
+                    <ul>
+                        <!-- example placeholder -->
+                        <li class="muted">No conversations yet.</li>
+                    </ul>
+                </aside>
+                <section class="chat">
+                    <div class="chat-header muted">Select a conversation</div>
+                    <div class="chat-body"></div>
+                    <div class="chat-input">
+                        <input type="text" placeholder="Type message..." disabled>
+                        <button class="btn" disabled>Send</button>
+                    </div>
+                </section>
+            </div>
+        </section>
+    </main>
+</div>
 </body>
 </html>

@@ -1,15 +1,43 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
 <head>
-    <title>Analytics</title>
-    <link rel="stylesheet" th:href="@{/css/admin-analytics.css}">
-    <link rel="stylesheet" th:href="@{/css/styles.css}">
+    <meta charset="UTF-8">
+    <title>Admin • Analytics</title>
+    <link rel="stylesheet" th:href="@{/static.css/styles.css}">
+    <link rel="stylesheet" th:href="@{/static.css/admin-analytics.css}">
 </head>
 <body>
-<div th:replace="fragments/sidebar :: sidebar"></div>
-<main class="main">
-    <div class="page-head"><h1>Analytics</h1></div>
-    <p>Coming soon: charts, trends, funnel metrics.</p>
-</main>
+<div class="layout">
+    <div th:replace="fragments/sidebar :: sidebar"></div>
+
+    <main class="content">
+        <header class="page-header">
+            <h1>Analytics</h1>
+        </header>
+
+        <section class="panel">
+            <div class="filters">
+                <form method="get">
+                    <label>Range:
+                        <select name="range">
+                            <option th:value="7d"  th:selected="${range=='7d'}">Last 7 days</option>
+                            <option th:value="30d" th:selected="${range=='30d'}">Last 30 days</option>
+                            <option th:value="90d" th:selected="${range=='90d'}">Last 90 days</option>
+                        </select>
+                    </label>
+                    <button class="btn" type="submit">Apply</button>
+                </form>
+            </div>
+
+            <div class="cards">
+                <div class="card"><h3>New Users</h3><div class="big">—</div></div>
+                <div class="card"><h3>Active Users</h3><div class="big">—</div></div>
+                <div class="card"><h3>Matches Made</h3><div class="big">—</div></div>
+            </div>
+
+            <div class="chart-placeholder">Chart placeholder (plug your charting later)</div>
+        </section>
+    </main>
+</div>
 </body>
 </html>

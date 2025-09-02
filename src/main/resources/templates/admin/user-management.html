@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>User Management</title>
+    <link rel="stylesheet" th:href="@{/css/styles.css}">
+    <link rel="stylesheet" th:href="@{/css/admin-user-management.css}">
+</head>
+<body>
+<div th:replace="fragments/sidebar :: sidebar"></div>
+
+<main class="main-content">
+    <div class="page-head">
+        <h1>User Management</h1>
+        <div class="page-tools">
+            <form th:action="@{/admin/users}" method="get" class="search">
+                <input type="text" name="keyword" th:value="${keyword}" placeholder="Search user…"/>
+                <button type="submit">Search</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="content card">
+        <div class="grid data-table user-table">
+            <table>
+                <thead>
+                <tr>
+                    <th>Email</th>
+                    <th>
+                        <a th:href="@{/admin/users(sort='joinDate',dir=${dir=='asc' ? 'desc':'asc'},keyword=${keyword})}">
+                            Join Date
+                        </a>
+                    </th>
+                    <th>Status</th>
+                    <th>Email verified</th>
+                    <th>Student-ID</th>
+                    <th>Actions</th>
+                </tr>
+                </thead>
+
+                <tbody>
+                <tr th:each="u : ${users}">
+                    <td>
+                        <div class="email" th:text="${u.email}">email@example.com</div>
+                        <div class="meta" th:text="${u.name}">Name</div>
+                    </td>
+
+                    <td th:text="${u.joinDate}">2025-08-29</td>
+
+                    <td>
+                        <span th:class="'badge ' + (${u.active} ? 'active':'inactive')"
+                              th:text="${u.active}? 'Active':'Inactive'">Active</span>
+                    </td>
+
+                    <!-- NEW: email verification badge -->
+                    <td>
+                        <span th:class="'badge ' + (${u.emailVerified} ? 'ok':'warn')"
+                              th:text="${u.emailVerified} ? 'Verified' : 'Not verified'">Verified</span>
+                    </td>
+
+                    <!-- NEW: ID verification badge -->
+                    <td>
+                        <span th:if="${u.idvStatus != null}"
+                              th:class="'badge ' + (${u.idvStatus}=='VERIFIED' ? 'ok' :
+                                                     (${u.idvStatus}=='PENDING' ? 'warn' :
+                                                     (${u.idvStatus}=='REJECTED' ? 'danger' : 'muted')))"
+                              th:text="${u.idvStatus}">VERIFIED</span>
+                        <span th:unless="${u.idvStatus != null}" class="badge muted">—</span>
+                    </td>
+
+                    <td>
+                        <details class="action-menu">
+                            <summary class="btn small">Action ▾</summary>
+                            <div class="menu">
+                                <a th:href="@{'/admin/users/view/' + ${u.id}}">View Profile</a>
+                                <a th:if="${u.active}" th:href="@{'/admin/users/suspend/' + ${u.id}}">Suspend</a>
+                                <a th:unless="${u.active}" th:href="@{'/admin/users/activate/' + ${u.id}}">Activate</a>
+                                <a class="danger" th:href="@{'/admin/users/delete/' + ${u.id}}"
+                                   onclick="return confirm('Delete this user?');">Delete</a>
+                            </div>
+                        </details>
+                    </td>
+                </tr>
+
+                <tr th:if="${#lists.isEmpty(users)}">
+                    <td colspan="6" class="empty">No users found.</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- pagination (unchanged) -->
+        <div class="pagination" th:if="${pageData != null}">
+            <div>
+                Showing <b th:text="${pageData.number * pageData.size + 1}">1</b> -
+                <b th:text="${pageData.number * pageData.size + users.size()}">10</b>
+                of <b th:text="${pageData.totalElements}">100</b> users
+            </div>
+            <div class="buttons">
+                <a class="btn" th:classappend="${pageData.first}? ' disabled'"
+                   th:href="@{/admin/users(page=${pageData.number-1},keyword=${keyword},sort=${sort},dir=${dir})}"
+                   th:attr="aria-disabled=${pageData.first}">Previous</a>
+                <a class="btn" th:classappend="${pageData.last}? ' disabled'"
+                   th:href="@{/admin/users(page=${pageData.number+1},keyword=${keyword},sort=${sort},dir=${dir})}"
+                   th:attr="aria-disabled=${pageData.last}">Next</a>
+            </div>
+        </div>
+    </div>
+</main>
+</body>
+</html>

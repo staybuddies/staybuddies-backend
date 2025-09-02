@@ -56,6 +56,10 @@ public class RoomFinder extends AbstractAuditableEntity {
     @Column(nullable = false)
     private boolean schoolEmailVerified = false;
 
+    @Column(nullable = false)
+    private int tokenVersion = 0;
+
+
 }
 
 

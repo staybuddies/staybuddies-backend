@@ -1,15 +1,47 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
 <head>
-    <title>Report & Moderation</title>
-    <link rel="stylesheet" th:href="@{/css/admin-reports.css}">
-    <link rel="stylesheet" th:href="@{/css/styles.css}">
+    <meta charset="UTF-8">
+    <title>Admin • Reports & Moderation</title>
+    <link rel="stylesheet" th:href="@{/static.css/styles.css}">
+    <link rel="stylesheet" th:href="@{/static.css/admin-reports.css}">
 </head>
 <body>
-<div th:replace="fragments/sidebar :: sidebar"></div>
-<main class="main">
-    <div class="page-head"><h1>Report & Moderation</h1></div>
-    <p>Coming soon: queue of user reports, bulk actions, filters.</p>
-</main>
+<div class="layout">
+    <div th:replace="fragments/sidebar :: sidebar"></div>
+
+    <main class="content">
+        <header class="page-header">
+            <h1>Report & Moderation</h1>
+        </header>
+
+        <section class="panel">
+            <form class="toolbar" method="get">
+                <input type="text" name="keyword" placeholder="Search reports..." th:value="${keyword}">
+                <select name="status">
+                    <option th:value=""  th:selected="${status == null or status == ''}">All</option>
+                    <option th:value="OPEN"  th:selected="${status == 'OPEN'}">Open</option>
+                    <option th:value="IN_REVIEW" th:selected="${status == 'IN_REVIEW'}">In Review</option>
+                    <option th:value="RESOLVED" th:selected="${status == 'RESOLVED'}">Resolved</option>
+                </select>
+                <button type="submit" class="btn">Search</button>
+            </form>
+
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                    <tr>
+                        <th>ID</th><th>Reporter</th><th>Target User</th><th>Reason</th><th>Status</th><th>Created</th><th>Action</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <!-- plug your real data later -->
+                    <tr><td colspan="7" class="muted">No data yet.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+</div>
 </body>
 </html>

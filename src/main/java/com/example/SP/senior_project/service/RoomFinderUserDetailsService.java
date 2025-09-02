@@ -24,6 +24,7 @@ public class RoomFinderUserDetailsService implements UserDetailsService {
                 .withUsername(rf.getEmail())
                 .password(rf.getPassword())
                 .roles("USER")
+                .disabled(!rf.isActive())
                 .build();
     }
 }

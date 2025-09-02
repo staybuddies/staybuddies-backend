@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title th:text="${form.id} != null ? 'Edit User' : 'New User'">User</title>
+    <link rel="stylesheet" th:href="@{/css/styles.css}">
+</head>
+<body>
+<div th:replace="fragments/sidebar :: sidebar"></div>
+
+<main class="main-content">
+    <div class="page-head">
+        <h1 th:text="${form.id} != null ? 'Edit User' : 'Create User'">User</h1>
+        <a class="btn" th:href="@{/admin/users}">Back to list</a>
+    </div>
+
+    <div class="content card form-card">
+        <div th:if="${success}" class="alert success" th:text="${success}"></div>
+        <div th:if="${error}" class="alert error" th:text="${error}"></div>
+
+        <form th:action="@{/admin/users/save}" th:object="${form}" method="post" enctype="multipart/form-data"
+              class="form">
+            <input type="hidden" th:field="*{id}"/>
+
+            <div class="row">
+                <label>Full Name</label>
+                <input type="text" th:field="*{name}" required/>
+                <div class="field-error" th:if="${#fields.hasErrors('name')}" th:errors="*{name}"></div>
+            </div>
+
+            <div class="row">
+                <label>Email</label>
+                <input type="email" th:field="*{email}" required/>
+                <div class="field-error" th:if="${#fields.hasErrors('email')}" th:errors="*{email}"></div>
+            </div>
+
+            <div class="row">
+                <label>Phone</label>
+                <input type="text" th:field="*{phone}"/>
+            </div>
+
+            <div class="row" th:if="${form.id == null}">
+                <label>Initial Password</label>
+                <input type="password" th:field="*{password}"/>
+                <div class="help">Set an initial password when creating a new user.</div>
+            </div>
+
+            <div class="row">
+                <label>Gender</label>
+                <input type="text" th:field="*{gender}" placeholder="Male / Female / Other"/>
+            </div>
+
+            <div class="row">
+                <label>Age</label>
+                <input type="number" th:field="*{age}" min="16" max="99"/>
+            </div>
+
+            <div class="row">
+                <label>Location</label>
+                <input type="text" th:field="*{location}"/>
+            </div>
+
+            <div class="row">
+                <label>University</label>
+                <input type="text" th:field="*{university}"/>
+            </div>
+
+            <div class="row">
+                <label>Major</label>
+                <input type="text" th:field="*{major}"/>
+            </div>
+
+            <div class="row">
+                <label>Bio</label>
+                <textarea rows="4" th:field="*{bio}" placeholder="Short bio…"></textarea>
+            </div>
+
+            <div class="row">
+                <label>Already has room?</label>
+                <input type="checkbox" th:field="*{alreadyHasRoom}"/>
+            </div>
+
+            <div class="row">
+                <label>Profile Photo</label>
+                <input type="file" name="file" accept="image/*"/>
+                <div class="help">Optional. Upload or replace profile photo.</div>
+            </div>
+
+            <div class="actions">
+                <button class="btn primary" type="submit">Save</button>
+                <a class="btn ghost" th:href="@{/admin/users}">Cancel</a>
+            </div>
+        </form>
+    </div>
+</main>
+</body>
+</html>

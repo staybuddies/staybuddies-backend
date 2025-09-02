@@ -87,6 +87,19 @@ public class SecurityConfig {
         return src;
     }
 
+    @Bean
+    @Order(0)
+    public SecurityFilterChain staticResources(HttpSecurity http) throws Exception {
+        http.securityMatcher("/uploads/**", "/files/**", "/favicon.ico")
+                .authorizeHttpRequests(a -> a.anyRequest().permitAll())
+                .csrf(c -> c.disable())
+                .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .requestCache(r -> r.disable())
+                .securityContext(s -> s.disable());
+
+        return http.build();
+    }
+
     /* --------- API chain (/api/**) --------- */
     @Bean
     @Order(1)
@@ -117,10 +130,10 @@ public class SecurityConfig {
     @Order(2)
     public SecurityFilterChain mvcSecurityFilterChain(HttpSecurity http) throws Exception {
         http.securityMatcher("/login", "/register", "/logout",
-                        "/admins/**", "/css/**", "/js/**", "/images/**")
+                        "/admins/**", "/css/**", "/js/**", "/images/**", "/uploads/**","/files/**")
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/login", "/register", "/css/**", "/js/**", "/images/**").permitAll()
+                        .requestMatchers("/login", "/register", "/css/**", "/js/**", "/images/**","/uploads/**", "/files/**").permitAll()
                         .requestMatchers("/admins/**").hasRole("ADMIN")
                         .anyRequest().permitAll()
                 )

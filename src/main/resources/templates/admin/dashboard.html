@@ -1,19 +1,52 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
 <head>
-    <title>Dashboard</title>
-    <link rel="stylesheet" th:href="@{/css/admin-dashboard.css}">
+    <meta charset="UTF-8">
+    <title>Admin • Dashboard</title>
     <link rel="stylesheet" th:href="@{/css/styles.css}">
+    <link rel="stylesheet" th:href="@{/css/admin-dashboard.css}">
 </head>
 <body>
-<div th:replace="fragments/sidebar :: sidebar"></div>
-<main class="main">
-    <div class="page-head"><h1>Dashboard</h1></div>
-    <section class="cards">
-        <div class="card kpi"><h3>Total Admins</h3><p th:text="${totalAdmins}">0</p></div>
-        <div class="card kpi"><h3>New Reports</h3><p th:text="${newReports}">0</p></div>
-        <div class="card kpi"><h3>Active Conversations</h3><p th:text="${activeConvos}">0</p></div>
-    </section>
-</main>
+<div class="layout">
+    <div th:replace="fragments/sidebar :: sidebar"></div>
+
+    <main class="content">
+        <header class="page-header">
+            <h1>Dashboard</h1>
+        </header>
+
+        <section class="alerts">
+            <div class="alert success" th:if="${success}" th:text="${success}"></div>
+            <div class="alert error" th:if="${error}" th:text="${error}"></div>
+        </section>
+
+        <section class="stats-grid">
+            <div class="stat-card">
+                <div class="label">Total Admins</div>
+                <div class="value" th:text="${totalAdmins}">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">New Reports</div>
+                <div class="value" th:text="${newReports}">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">Active Conversations</div>
+                <div class="value" th:text="${activeConvos}">0</div>
+            </div>
+        </section>
+
+        <section class="panel">
+            <h2>Quick Links</h2>
+            <div class="quick-links">
+                <a class="btn" th:href="@{/admin/users}">User Management</a>
+                <a class="btn" th:href="@{/admins}">Admin Management</a>
+                <a class="btn" th:href="@{/admin/reports}">Report & Moderation</a>
+                <a class="btn" th:href="@{/admin/messages}">Message & Monitoring</a>
+                <a class="btn" th:href="@{/admin/analytics}">Analytics</a>
+                <a class="btn" th:href="@{/admin/settings}">System Settings</a>
+            </div>
+        </section>
+    </main>
+</div>
 </body>
 </html>

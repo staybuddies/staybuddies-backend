@@ -22,4 +22,6 @@ public class RoomFinderDto {
     private Boolean locationSharing;
     private Boolean emailNotification;
 
+    private String schoolEmail;
+    private boolean schoolEmailVerified;
 }

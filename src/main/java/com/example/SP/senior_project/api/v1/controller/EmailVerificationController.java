@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Duration;
+import java.util.Map;
 import java.util.Optional;
 import java.util.regex.Pattern;
 
@@ -24,14 +25,13 @@ public class EmailVerificationController {
 
     private static final String PURPOSE = "ACCOUNT_VERIFY";
 
-    // Case-insensitive email regex
     private static final Pattern EMAIL_RE = Pattern.compile(
             "^[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,}$",
             Pattern.CASE_INSENSITIVE
     );
 
     @PostMapping("/request")
-    public ResponseEntity<Void> request(@RequestParam String email) {
+    public ResponseEntity<Map<String, Object>> request(@RequestParam String email) {
         String normalized = email == null ? "" : email.trim().toLowerCase();
         if (!EMAIL_RE.matcher(normalized).matches()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid email address.");
@@ -47,11 +47,11 @@ public class EmailVerificationController {
             roomFinderRepo.save(user);
         });
 
-        return ResponseEntity.ok().build();
+        return ResponseEntity.ok(Map.of("status", "SENT"));
     }
 
     @PostMapping("/confirm")
-    public ResponseEntity<Void> confirm(@RequestParam String email, @RequestParam String code) {
+    public ResponseEntity<Map<String, Object>> confirm(@RequestParam String email, @RequestParam String code) {
         String normalized = email == null ? "" : email.trim().toLowerCase();
         if (!EMAIL_RE.matcher(normalized).matches()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid email address.");
@@ -60,14 +60,17 @@ public class EmailVerificationController {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid/expired code.");
         }
 
-        // mark verified for logged-in user
-        currentUser().ifPresent(user -> {
+        RoomFinder saved = currentUser().map(user -> {
             user.setSchoolEmail(normalized);
             user.setSchoolEmailVerified(true);
-            roomFinderRepo.save(user);
-        });
+            return roomFinderRepo.save(user);
+        }).orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED));
 
-        return ResponseEntity.ok().build();
+        // return fresh truth so UI can flip immediately
+        return ResponseEntity.ok(Map.of(
+                "schoolEmail", saved.getSchoolEmail(),
+                "schoolEmailVerified", saved.isSchoolEmailVerified()
+        ));
     }
 
     private Optional<RoomFinder> currentUser() {

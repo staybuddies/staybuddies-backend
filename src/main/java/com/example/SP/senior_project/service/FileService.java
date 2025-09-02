@@ -32,40 +32,39 @@ public class FileService {
 
     private final FileStorageRepository fileStorageRepository;
     private final AmazonS3 amazonS3;
+    private final PublicUrlMapper publicUrlMapper;
 
     private final String s3BaseUrl = "https://%s.s3.%s.amazonaws.com/%s";
+
     /**
      * Returns the file URL for a given file type and id (e.g. ADMIN_PROFILE, adminId).
      * If no file exists, returns null.
      */
     public String getFileName(FileType fileType, Long id) {
-        List<FileStorage> fileStorageList = fileStorageRepository.findByTypeAndFileId(fileType, id);
-        if (fileStorageList.isEmpty()) {
-            return null;
-        }
+        var list = fileStorageRepository.findByTypeAndFileId(fileType, id);
+        if (list == null || list.isEmpty()) return null;
 
-        FileStorage file = fileStorageList
-                .stream()
+        var file = list.stream()
                 .sorted(Comparator.comparing(FileStorage::getCreatedAt).reversed())
                 .findFirst()
                 .orElse(null);
+
+        if (file == null) return null;
         return getFileUrl(file.getKey(), file.getServiceName());
     }
 
-    /**
-     * Builds the file URL depending on local or S3.
-     */
     public String getFileUrl(String fileKey, String serviceName) {
+        if (fileKey == null || serviceName == null) return null;
+
         if ("local".equalsIgnoreCase(serviceName)) {
-            return "/files/" + fileKey;
-        } else {
-            return String.format(
-                    "https://%s.s3.%s.amazonaws.com/%s",
-                    s3BucketName,
-                    awsRegion,
-                    fileKey);
+            // Let the mapper handle keys or absolute paths
+            return publicUrlMapper.toPublicUrl(fileKey);
         }
+        // S3
+        return String.format("https://%s.s3.%s.amazonaws.com/%s",
+                s3BucketName, awsRegion, fileKey);
     }
+
     /**
      * Handles uploading a file for a given entity.
      * If an old file exists for the same type + id, deletes it first.

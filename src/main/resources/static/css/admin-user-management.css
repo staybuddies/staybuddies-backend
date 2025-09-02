@@ -1,0 +1,240 @@
+/* ============================
+   Admin – User Management (list)
+   ============================ */
+
+/* Table wrapper */
+.user-table {
+    position: relative;
+    overflow: visible;
+}
+
+/* Table base + keep full width */
+.user-table table {
+    width: 100%;
+    table-layout: fixed; /* even spread */
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+.user-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: #f7fff8;
+    color: var(--ink);
+    font-weight: 1000;
+}
+
+.user-table th,
+.user-table td {
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--line);
+    text-align: left;
+    vertical-align: middle;
+    white-space: nowrap;
+}
+
+.user-table tr:last-child td {
+    border-bottom: 0;
+}
+
+.user-table tbody tr:hover {
+    background: #fcfffa;
+}
+
+/* ------------ Column widths (6 columns) ------------ */
+/* 1) Email + name */
+.user-table th:nth-child(1),
+.user-table td:nth-child(1) {
+    width: 34%;
+    white-space: normal;
+}
+
+/* 2) Join Date */
+.user-table th:nth-child(2),
+.user-table td:nth-child(2) {
+    width: 12%;
+    text-align: center;
+}
+
+/* 3) Email Verified */
+.user-table th:nth-child(3),
+.user-table td:nth-child(3) {
+    width: 12%;
+    text-align: center;
+}
+
+/* 4) ID Status */
+.user-table th:nth-child(4),
+.user-table td:nth-child(4) {
+    width: 14%;
+    text-align: center;
+}
+
+/* 5) Active/Inactive */
+.user-table th:nth-child(5),
+.user-table td:nth-child(5) {
+    width: 12%;
+    text-align: center;
+}
+
+/* 6) Actions */
+.user-table th:nth-child(6),
+.user-table td:nth-child(6) {
+    width: 16%;
+    text-align: right;
+}
+
+/* Cell typography */
+.user-table .email {
+    color: #334155;
+    font-size: 1.2rem;
+}
+
+.user-table .meta {
+    color: var(--muted);
+    font-size: 1rem;
+}
+
+/* Buttons in last column */
+.user-table td:nth-child(6) .btn {
+    min-width: 92px;
+}
+
+/* -------- Verification badges / pills -------- */
+.badge {
+    display: inline-block;
+    padding: 0.2rem 0.55rem;
+    border-radius: 999px;
+    font-weight: 800;
+    font-size: 0.8rem;
+    border: 1px solid transparent;
+}
+
+.badge.ok {
+    background: #e6fff1;
+    color: #1b9536;
+    border-color: #b8f1ce;
+}
+
+.badge.warn {
+    background: #fff7cc;
+    color: #8a6a00;
+    border-color: #fde68a;
+}
+
+/* ID status pills (VERIFIED / PENDING / REJECTED) */
+.pill {
+    display: inline-block;
+    padding: 0.25rem 0.65rem;
+    border-radius: 999px;
+    font-weight: 800;
+    font-size: 0.8rem;
+}
+
+.pill-ok {
+    background: #d4ff87;
+    color: #1b9536;
+}
+
+.pill-warn {
+    background: #fff7cc;
+    color: #8a6a00;
+}
+
+.pill-bad {
+    background: #ffe3e3;
+    color: #a61b1b;
+}
+
+/* -------- Action dropdown (only visual/stacking) -------- */
+.user-table td {
+    position: relative;
+    overflow: visible;
+}
+
+.action-menu {
+    position: relative;
+    display: inline-block;
+}
+
+.action-menu summary {
+    list-style: none;
+}
+
+.action-menu summary::-webkit-details-marker {
+    display: none;
+}
+
+.action-menu summary.btn {
+    display: inline-flex;
+    align-items: center;
+    gap: .35rem;
+    padding: .45rem .8rem;
+    border: 1px solid var(--line);
+    background: #fff;
+    border-radius: 10px;
+    font-weight: 800;
+    cursor: pointer;
+    user-select: none;
+}
+
+.action-menu[open] summary.btn {
+    box-shadow: 0 4px 14px rgba(0, 0, 0, .08);
+}
+
+.action-menu .menu {
+    position: absolute;
+    right: 0;
+    top: calc(100% + 8px);
+    z-index: 9999;
+    min-width: 180px;
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    box-shadow: 0 16px 36px rgba(0, 0, 0, .18);
+    padding: .35rem 0;
+}
+
+.action-menu:not([open]) .menu {
+    display: none;
+}
+
+.action-menu .menu a,
+.action-menu .menu button {
+    display: block;
+    width: 100%;
+    text-align: left;
+    background: transparent;
+    border: 0;
+    padding: .55rem .8rem;
+    font-size: .92rem;
+    color: #0f172a;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.action-menu .menu a:hover,
+.action-menu .menu button:hover {
+    background: #f8faf8;
+}
+
+.action-menu .menu .danger {
+    color: #e03131;
+}
+
+/* -------- Responsive tweaks -------- */
+@media (max-width: 1100px) {
+    .user-table th,
+    .user-table td {
+        padding: 12px 12px;
+    }
+
+    .user-table .email {
+        font-size: 1.05rem;
+    }
+
+    .user-table .meta {
+        font-size: 0.9rem;
+    }
+}

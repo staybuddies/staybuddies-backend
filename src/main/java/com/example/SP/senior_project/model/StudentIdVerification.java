@@ -1,42 +1,62 @@
 package com.example.SP.senior_project.model;
 
+import com.example.SP.senior_project.model.base.AbstractAuditableEntity;
+import com.example.SP.senior_project.model.constant.VerificationStatus;
 import jakarta.persistence.*;
-import lombok.Getter;
-import lombok.Setter;
+import lombok.Data;
 
-import java.time.LocalDateTime;
-
+@Data
 @Entity
 @Table(name = "student_id_verifications")
-@Getter
-@Setter
-public class StudentIdVerification {
+public class StudentIdVerification extends AbstractAuditableEntity {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
-    private Long userId;     // RoomFinder.id
-    @Column(nullable = false)
+    // SINGLE association only; keep the existing DB column name
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "room_finder_id", nullable = false)
+    private RoomFinder user;
+
+    // denormalized for convenience / reporting
+    @Column(name = "user_email", nullable = false, length = 255)
     private String userEmail;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private Status status = Status.DRAFT; // DRAFT -> PENDING -> VERIFIED/REJECTED
+    private VerificationStatus status = VerificationStatus.DRAFT;
 
-    private Integer score;
-    private String note;
+    @Column(name = "front_path")
+    private String frontPath;
+
+    @Column(name = "back_path")
+    private String backPath;
+
+    @Column(name = "selfie_path")
+    private String selfiePath;
+
+    @Column(name = "name_on_card")
     private String nameOnCard;
+
+    @Column(name = "student_id_on_card")
     private String studentIdOnCard;
+
+    @Column(name = "university_on_card")
     private String universityOnCard;
 
-    // file presence flags or storage keys (optional)
-    private Boolean hasFront = false;
-    private Boolean hasBack = false;
-    private Boolean hasSelfie = false;
+    @Column(name = "grad_year_on_card")
+    private Integer gradYearOnCard;
 
-    private LocalDateTime createdAt = LocalDateTime.now();
-    private LocalDateTime updatedAt = LocalDateTime.now();
+    @Column(length = 1000)
+    private String note;
 
-    public enum Status {DRAFT, PENDING, VERIFIED, REJECTED}
+    private Double score;
+
+    @PrePersist
+    void fillUserEmail() {
+        if (userEmail == null && user != null) {
+            userEmail = user.getEmail();
+        }
+    }
 }

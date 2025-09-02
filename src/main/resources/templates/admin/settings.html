@@ -1,27 +1,54 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
 <head>
-    <title>System Settings</title>
-    <link rel="stylesheet" th:href="@{/css/admin-settings.css}">
-    <link rel="stylesheet" th:href="@{/css/styles.css}">
+    <meta charset="UTF-8">
+    <title>Admin • System Settings</title>
+    <link rel="stylesheet" th:href="@{/static.css/styles.css}">
+    <link rel="stylesheet" th:href="@{/static.css/admin-settings.css}">
 </head>
 <body>
-<div th:replace="fragments/sidebar :: sidebar"></div>
-<main class="main">
-    <div class="page-head"><h1>System Settings</h1></div>
-    <form class="card form">
-        <div class="row">
-            <label>Site Name</label>
-            <input type="text" placeholder="StayBuddies Admin">
-        </div>
-        <div class="row">
-            <label>Support Email</label>
-            <input type="email" placeholder="support@example.com">
-        </div>
-        <div class="actions">
-            <button class="btn primary" type="button">Save</button>
-        </div>
-    </form>
-</main>
+<div class="layout">
+    <div th:replace="fragments/sidebar :: sidebar"></div>
+
+    <main class="content">
+        <header class="page-header">
+            <h1>System Settings</h1>
+        </header>
+
+        <section class="alerts">
+            <div class="alert success" th:if="${success}" th:text="${success}"></div>
+            <div class="alert error" th:if="${error}" th:text="${error}"></div>
+        </section>
+
+        <section class="panel">
+            <form method="post" th:action="@{/admin/settings}">
+                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+                <div class="form-grid">
+                    <label>Maintenance Mode
+                        <select name="maintenance">
+                            <option value="false" th:selected="${!maintenance}">Off</option>
+                            <option value="true"  th:selected="${maintenance}">On</option>
+                        </select>
+                    </label>
+
+                    <label>Allow New Signups
+                        <select name="allowSignup">
+                            <option value="true"  th:selected="${allowSignup}">Yes</option>
+                            <option value="false" th:selected="${!allowSignup}">No</option>
+                        </select>
+                    </label>
+
+                    <label>Default Notification
+                        <select name="defaultNotify">
+                            <option value="EMAIL" th:selected="${defaultNotify=='EMAIL'}">Email</option>
+                            <option value="NONE"  th:selected="${defaultNotify=='NONE'}">None</option>
+                        </select>
+                    </label>
+                </div>
+                <button class="btn primary" type="submit">Save Settings</button>
+            </form>
+        </section>
+    </main>
+</div>
 </body>
 </html>

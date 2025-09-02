@@ -1,5 +1,6 @@
 package com.example.SP.senior_project.config.jwt;
 
+import com.example.SP.senior_project.repository.RoomFinderRepository;
 import com.example.SP.senior_project.util.JwtUtil;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -22,15 +23,17 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtUtil jwtUtil;
     private final UserDetailsService userDetailsService;
+    private final RoomFinderRepository roomFinderRepository;
 
     public JwtAuthenticationFilter(
             JwtUtil jwtUtil,
-            @Qualifier("roomFinderUserDetailsService") UserDetailsService userDetailsService
+            @Qualifier("roomFinderUserDetailsService") UserDetailsService uds,
+            RoomFinderRepository roomFinderRepository
     ) {
         this.jwtUtil = jwtUtil;
-        this.userDetailsService = userDetailsService;
+        this.userDetailsService = uds;
+        this.roomFinderRepository = roomFinderRepository;
     }
-
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
@@ -38,29 +41,50 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                                     FilterChain filterChain)
             throws ServletException, IOException {
 
+        String auth = request.getHeader("Authorization");
+        if (auth == null || !auth.startsWith("Bearer ")) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
+        String token = auth.substring(7);
         try {
-            String auth = request.getHeader("Authorization");
-            if (auth == null || !auth.startsWith("Bearer ")) {
-                filterChain.doFilter(request, response);
-                return;
-            }
+            String email = jwtUtil.extractUsername(token);
+            if (email != null && SecurityContextHolder.getContext().getAuthentication() == null) {
 
-            String token = auth.substring(7);
-            String username = jwtUtil.extractUsername(token);
-            if (username != null
-                    && SecurityContextHolder.getContext().getAuthentication() == null) {
+                var user = roomFinderRepository.findByEmailIgnoreCase(email).orElse(null);
+                if (user == null) {
+                    filterChain.doFilter(request, response);
+                    return;
+                }
 
-                UserDetails ud = userDetailsService.loadUserByUsername(username);
+                // 1) Hard-block suspended
+                if (!user.isActive()) {
+                    response.setStatus(423); // LOCKED
+                    response.setContentType("application/json");
+                    response.getWriter().write(
+                            "{\"code\":\"SUSPENDED\",\"message\":\"Your account is suspended.\"}");
+                    return;
+                }
+
+                // 2) Reject old tokens
+                Integer v = jwtUtil.extractTokenVersion(token);
+                if (v == null || v != user.getTokenVersion()) {
+                    response.setStatus(401);
+                    return;
+                }
+
+                // 3) Normal JWT validation
+                UserDetails ud = userDetailsService.loadUserByUsername(email);
                 if (jwtUtil.validateToken(token, ud)) {
-                    UsernamePasswordAuthenticationToken authToken =
-                            new UsernamePasswordAuthenticationToken(
-                                    ud, null, ud.getAuthorities());
+                    var authToken = new UsernamePasswordAuthenticationToken(
+                            ud, null, ud.getAuthorities());
                     authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                     SecurityContextHolder.getContext().setAuthentication(authToken);
                 }
             }
         } catch (io.jsonwebtoken.JwtException | UsernameNotFoundException ex) {
-            // token invalid/expired or user missing -> ignore and continue unauthenticated
+            // invalid/expired/etc — just proceed unauthenticated
         }
 
         filterChain.doFilter(request, response);
