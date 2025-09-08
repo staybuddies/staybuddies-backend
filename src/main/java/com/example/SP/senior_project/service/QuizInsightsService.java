@@ -22,16 +22,30 @@ public class QuizInsightsService {
     private final RoomFinderRepository userRepo;
     private final QuizResponseRepository quizRepo;
 
-    // ----- Adjust these indexes to your actual quiz -----
-    private static final int CLEANLINESS   = 0; // 0..4 (low..high)
-    private static final int NOISE_TOL     = 1; // 0..4 (needs quiet..ok with noise)
-    private static final int SLEEP_TIME    = 2; // 0..4 (early..late)
-    private static final int STUDY_STYLE   = 3; // 0..4 (quiet/fixed..flexible)
-    private static final int GUEST_FREQ    = 4; // 0..4 (rare..frequent)
-    private static final int SMOKING_OK    = 5; // 0..4 (0=no smokers, 4=ok)
+    // ----- Quiz question indexes -----
+    private static final int CLEANLINESS = 0; // 0..4 (low..high)
+    private static final int NOISE_TOL = 1; // 0..4 (needs quiet..ok with noise)
+    private static final int SLEEP_TIME = 2; // 0..4 (early..late)
+    private static final int STUDY_STYLE = 3; // 0..4 (quiet/fixed..flexible)
+    private static final int GUEST_FREQ = 4; // 0..4 (rare..frequent)
+    private static final int SMOKING_OK = 5; // 0..4 (0=no smokers, 4=ok)
     private static final int COMMUNICATION = 6; // 0..4 (poor..excellent)
-    private static final int PRIVACY       = 7; // 0..4 (low..high)
-    // ----------------------------------------------------
+    private static final int PRIVACY = 7; // 0..4 (low..high)
+
+    // ----- Compatibility weights (adjust based on importance) -----
+    private static final double SMOKING_WEIGHT = 3.0;      // Critical - deal breaker potential
+    private static final double CLEANLINESS_WEIGHT = 2.5;  // Very important for daily life
+    private static final double COMMUNICATION_WEIGHT = 2.0; // Essential for conflict resolution
+    private static final double SLEEP_TIME_WEIGHT = 1.5;   // Important for peaceful coexistence
+    private static final double NOISE_TOL_WEIGHT = 1.5;    // Important for studying/sleeping
+    private static final double PRIVACY_WEIGHT = 1.2;      // Moderately important
+    private static final double STUDY_STYLE_WEIGHT = 1.0;  // Nice to have similarity
+    private static final double GUEST_FREQ_WEIGHT = 0.8;   // Least critical
+
+    // ----- Deal breaker thresholds -----
+    private static final int SMOKING_DEAL_BREAKER_THRESHOLD = 3;
+    private static final int CLEANLINESS_DEAL_BREAKER_THRESHOLD = 3;
+    private static final int COMMUNICATION_DEAL_BREAKER_THRESHOLD = 2;
 
     @Transactional(readOnly = true)
     public QuizInsightsDto insightsFor(String email) {
@@ -49,9 +63,9 @@ public class QuizInsightsService {
         dto.setPreferredCharacteristics(buildPreferred(a));
         dto.setDealBreakers(buildDealBreakers(a));
 
-        // Compatibility Analysis
+        // Compatibility Analysis using hybrid algorithm
         dto.setProfileTags(buildProfileTags(a));
-        Stats stats = computeCompatibilityStats(me.getId(), a);
+        Stats stats = computeHybridCompatibilityStats(me.getId(), a);
         dto.setAverageCompatibility(stats.avg());
         dto.setBestCompatibility(stats.best());
         dto.setHighCount(stats.high());
@@ -65,50 +79,75 @@ public class QuizInsightsService {
     private List<String> buildIdealTraits(List<Integer> a) {
         var out = new ArrayList<String>();
         if (val(a, CLEANLINESS) >= 3) out.add("Keeps a tidy, organized space");
-        if (val(a, NOISE_TOL) <= 1)   out.add("Respects quiet hours");
+        if (val(a, NOISE_TOL) <= 1) out.add("Respects quiet hours");
         if (val(a, COMMUNICATION) >= 3) out.add("Communicates issues openly");
-        if (val(a, PRIVACY) >= 3)     out.add("Respects personal space");
+        if (val(a, PRIVACY) >= 3) out.add("Respects personal space");
+        if (val(a, SMOKING_OK) == 0) out.add("Non-smoker lifestyle");
+        if (val(a, GUEST_FREQ) <= 1) out.add("Maintains a peaceful environment");
         return out;
     }
 
     private List<String> buildPreferred(List<Integer> a) {
         var out = new ArrayList<String>();
-        if (val(a, CLEANLINESS) >= 3)  out.add("Clean and organized");
-        if (val(a, NOISE_TOL) <= 1)    out.add("Prefers a quiet environment");
-        if (val(a, STUDY_STYLE) <= 1)  out.add("Similar focused study habits");
-        if (val(a, COMMUNICATION) >= 3) out.add("Good communication");
+        if (val(a, CLEANLINESS) >= 3) out.add("Clean and organized");
+        if (val(a, NOISE_TOL) <= 1) out.add("Prefers a quiet environment");
+        if (val(a, STUDY_STYLE) <= 1) out.add("Similar focused study habits");
+        if (val(a, COMMUNICATION) >= 3) out.add("Good communication skills");
+        if (val(a, SLEEP_TIME) <= 1) out.add("Early riser compatibility");
+        if (val(a, SLEEP_TIME) >= 3) out.add("Night owl compatibility");
         return out;
     }
 
     private List<String> buildDealBreakers(List<Integer> a) {
         var out = new ArrayList<String>();
-        if (val(a, SMOKING_OK) == 0)   out.add("Smokers");
-        if (val(a, GUEST_FREQ) >= 3)   out.add("Frequent loud parties");
-        if (val(a, PRIVACY) >= 3)      out.add("Disrespect for personal space");
+        if (val(a, SMOKING_OK) == 0) out.add("Smokers");
+        if (val(a, CLEANLINESS) >= 4 && val(a, COMMUNICATION) >= 3)
+            out.add("Messy and uncommunicative roommates");
+        if (val(a, GUEST_FREQ) == 0) out.add("Frequent loud parties");
+        if (val(a, PRIVACY) >= 3) out.add("Disrespect for personal space");
         if (val(a, COMMUNICATION) <= 1) out.add("Poor communication");
+        if (val(a, NOISE_TOL) == 0) out.add("Consistently noisy behavior");
         return out;
     }
 
     private List<String> buildProfileTags(List<Integer> a) {
         var tags = new ArrayList<String>();
-        // Sleep
-        if (val(a, SLEEP_TIME) <= 1)      tags.add("Early bird");
+
+        // Sleep schedule
+        if (val(a, SLEEP_TIME) <= 1) tags.add("Early bird");
         else if (val(a, SLEEP_TIME) >= 3) tags.add("Night owl");
-        else                               tags.add("Neutral schedule");
-        // Cleanliness
-        tags.add(val(a, CLEANLINESS) >= 3 ? "Very tidy" : "More relaxed about tidiness");
-        // Noise
-        tags.add(val(a, NOISE_TOL) <= 1 ? "Needs quiet" : "Okay with some noise");
-        // Social/guests
-        tags.add(val(a, GUEST_FREQ) >= 3 ? "Very social" : "Low guest frequency");
+        else tags.add("Neutral schedule");
+
+        // Cleanliness level
+        if (val(a, CLEANLINESS) >= 4) tags.add("Extremely tidy");
+        else if (val(a, CLEANLINESS) >= 3) tags.add("Very tidy");
+        else if (val(a, CLEANLINESS) >= 2) tags.add("Moderately tidy");
+        else tags.add("Relaxed about tidiness");
+
+        // Noise tolerance
+        if (val(a, NOISE_TOL) <= 1) tags.add("Needs quiet");
+        else if (val(a, NOISE_TOL) >= 3) tags.add("Very noise tolerant");
+        else tags.add("Moderate noise tolerance");
+
+        // Social activity
+        if (val(a, GUEST_FREQ) >= 3) tags.add("Very social");
+        else if (val(a, GUEST_FREQ) >= 2) tags.add("Moderately social");
+        else tags.add("Low guest frequency");
+
+        // Communication style
+        if (val(a, COMMUNICATION) >= 3) tags.add("Great communicator");
+        else if (val(a, COMMUNICATION) >= 2) tags.add("Good communicator");
+        else tags.add("Reserved communicator");
+
         return tags;
     }
 
-    /* ---------- Compatibility vs everyone else ---------- */
+    /* ---------- Hybrid Compatibility Algorithm ---------- */
 
-    private record Stats(int avg, int best, long high, long total) {}
+    private record Stats(int avg, int best, long high, long total) {
+    }
 
-    private Stats computeCompatibilityStats(Long meUserId, List<Integer> myAnswers) {
+    private Stats computeHybridCompatibilityStats(Long meUserId, List<Integer> myAnswers) {
         int best = 0;
         long total = 0;
         long high = 0;
@@ -117,10 +156,10 @@ public class QuizInsightsService {
         for (QuizResponse q : quizRepo.findAll()) {
             if (q == null || q.getAnswers() == null || q.getAnswers().isEmpty()) continue;
 
-            // skip self by RoomFinder id if present
+            // Skip self
             if (q.getRoomFinder() != null && Objects.equals(q.getRoomFinder().getId(), meUserId)) continue;
 
-            int s = score(myAnswers, q.getAnswers());
+            int s = hybridCompatibilityScore(myAnswers, q.getAnswers());
             sum += s;
             best = Math.max(best, s);
             if (s >= 80) high++;
@@ -130,6 +169,167 @@ public class QuizInsightsService {
         int avg = total == 0 ? 0 : Math.round(sum / (float) total);
         return new Stats(avg, best, high, total);
     }
+
+    /**
+     * Hybrid compatibility algorithm combining deal-breaker filtering with weighted scoring
+     */
+    private int hybridCompatibilityScore(List<Integer> a, List<Integer> b) {
+        // Phase 1: Check for deal breakers (immediate disqualification)
+        if (hasDealBreakers(a, b)) {
+            return 0; // Complete incompatibility
+        }
+
+        // Phase 2: Calculate weighted compatibility score
+        return calculateWeightedCompatibility(a, b);
+    }
+
+    /**
+     * Check for critical incompatibilities that should eliminate a match
+     */
+    private boolean hasDealBreakers(List<Integer> a, List<Integer> b) {
+        // Smoking incompatibility
+        if (val(a, SMOKING_OK) == 0 && val(b, SMOKING_OK) >= SMOKING_DEAL_BREAKER_THRESHOLD) {
+            return true;
+        }
+        if (val(b, SMOKING_OK) == 0 && val(a, SMOKING_OK) >= SMOKING_DEAL_BREAKER_THRESHOLD) {
+            return true;
+        }
+
+        // Extreme cleanliness mismatch
+        int cleanDiff = Math.abs(val(a, CLEANLINESS) - val(b, CLEANLINESS));
+        if (cleanDiff >= CLEANLINESS_DEAL_BREAKER_THRESHOLD &&
+                (val(a, CLEANLINESS) == 4 || val(b, CLEANLINESS) == 4)) {
+            return true;
+        }
+
+        // Communication breakdown potential
+        if (val(a, COMMUNICATION) <= 1 && val(b, COMMUNICATION) <= 1) {
+            return true; // Both poor communicators
+        }
+
+        // Extreme sleep schedule mismatch (>3 hour difference typically)
+        int sleepDiff = Math.abs(val(a, SLEEP_TIME) - val(b, SLEEP_TIME));
+        if (sleepDiff == 4) {
+            return true; // Early bird vs extreme night owl
+        }
+
+        return false;
+    }
+
+    /**
+     * Calculate weighted compatibility score with asymmetric considerations
+     */
+    private int calculateWeightedCompatibility(List<Integer> a, List<Integer> b) {
+        double totalScore = 0;
+        double totalWeight = 0;
+
+        // Critical factors (higher weights)
+        totalScore += calculateFactorScore(a, b, SMOKING_OK, SMOKING_WEIGHT, true);
+        totalWeight += SMOKING_WEIGHT;
+
+        totalScore += calculateFactorScore(a, b, CLEANLINESS, CLEANLINESS_WEIGHT, false);
+        totalWeight += CLEANLINESS_WEIGHT;
+
+        totalScore += calculateFactorScore(a, b, COMMUNICATION, COMMUNICATION_WEIGHT, false);
+        totalWeight += COMMUNICATION_WEIGHT;
+
+        // Important factors (medium weights)
+        totalScore += calculateFactorScore(a, b, SLEEP_TIME, SLEEP_TIME_WEIGHT, false);
+        totalWeight += SLEEP_TIME_WEIGHT;
+
+        totalScore += calculateAsymmetricNoiseScore(a, b, NOISE_TOL_WEIGHT);
+        totalWeight += NOISE_TOL_WEIGHT;
+
+        totalScore += calculateFactorScore(a, b, PRIVACY, PRIVACY_WEIGHT, false);
+        totalWeight += PRIVACY_WEIGHT;
+
+        // Nice-to-have factors (lower weights)
+        totalScore += calculateFactorScore(a, b, STUDY_STYLE, STUDY_STYLE_WEIGHT, false);
+        totalWeight += STUDY_STYLE_WEIGHT;
+
+        totalScore += calculateAsymmetricGuestScore(a, b, GUEST_FREQ_WEIGHT);
+        totalWeight += GUEST_FREQ_WEIGHT;
+
+        return (int) Math.round((totalScore / totalWeight) * 100);
+    }
+
+    /**
+     * Calculate compatibility score for a single factor
+     */
+    private double calculateFactorScore(List<Integer> a, List<Integer> b, int index,
+                                        double weight, boolean asymmetric) {
+        int valA = val(a, index);
+        int valB = val(b, index);
+        int diff = Math.abs(valA - valB);
+
+        // Perfect match
+        if (diff == 0) return weight;
+
+        // Good compatibility
+        if (diff == 1) return weight * 0.85;
+
+        // Moderate compatibility
+        if (diff == 2) return weight * 0.6;
+
+        // Poor compatibility
+        if (diff == 3) return weight * 0.3;
+
+        // Very poor compatibility
+        return weight * 0.1;
+    }
+
+    /**
+     * Asymmetric noise tolerance scoring
+     * Someone okay with noise can live with someone who needs quiet, but not vice versa
+     */
+    private double calculateAsymmetricNoiseScore(List<Integer> a, List<Integer> b, double weight) {
+        int noiseA = val(a, NOISE_TOL);
+        int noiseB = val(b, NOISE_TOL);
+
+        // If both need quiet or both okay with noise
+        if (Math.abs(noiseA - noiseB) <= 1) {
+            return weight;
+        }
+
+        // If one needs quiet and other is very tolerant, it can work
+        if ((noiseA <= 1 && noiseB >= 3) || (noiseB <= 1 && noiseA >= 3)) {
+            return weight * 0.7;
+        }
+
+        // Moderate mismatch
+        return weight * 0.4;
+    }
+
+    /**
+     * Asymmetric guest frequency scoring
+     * Someone who rarely has guests can live with someone social, but very social person
+     * might not be satisfied with someone who never has guests
+     */
+    private double calculateAsymmetricGuestScore(List<Integer> a, List<Integer> b, double weight) {
+        int guestA = val(a, GUEST_FREQ);
+        int guestB = val(b, GUEST_FREQ);
+
+        int diff = Math.abs(guestA - guestB);
+
+        // Similar guest frequency
+        if (diff <= 1) return weight;
+
+        // One social, one not - can work with some compromise
+        if (diff == 2) return weight * 0.7;
+
+        // Very different social needs
+        if (diff >= 3) {
+            // If one person is very social (4) and other rarely has guests (0-1)
+            if ((guestA >= 3 && guestB <= 1) || (guestB >= 3 && guestA <= 1)) {
+                return weight * 0.3;
+            }
+            return weight * 0.5;
+        }
+
+        return weight * 0.4;
+    }
+
+    /* ---------- Enhanced matching explanations ---------- */
 
     @Transactional(readOnly = true)
     public List<String> tagsForUser(Long userId) {
@@ -147,39 +347,87 @@ public class QuizInsightsService {
         var a = me.getAnswers();
         var b = other.getAnswers();
 
-        var out = new ArrayList<String>();
-        if (close(a, b, SLEEP_TIME, 1))    out.add("Similar sleep schedules");
-        if (close(a, b, CLEANLINESS, 1))   out.add("Compatible cleanliness standards");
-        if (close(a, b, NOISE_TOL, 1))     out.add("Both prefer quiet environments");
-        if (close(a, b, STUDY_STYLE, 1))   out.add("Similar study/working style");
-        if (close(a, b, PRIVACY, 1))       out.add("Similar privacy expectations");
-        if (far(a, b, GUEST_FREQ, 2))      out.add("Different guest frequency");
-        return out;
-    }
+        var reasons = new ArrayList<String>();
 
-    private boolean close(List<Integer> a, List<Integer> b, int idx, int tol) {
-        if (idx >= a.size() || idx >= b.size()) return false;
-        return Math.abs(val(a, idx) - val(b, idx)) <= tol;
-    }
+        // Check for strong compatibility factors
+        if (close(a, b, SLEEP_TIME, 1)) reasons.add("Similar sleep schedules");
+        if (close(a, b, CLEANLINESS, 1)) reasons.add("Compatible cleanliness standards");
+        if (close(a, b, COMMUNICATION, 1)) reasons.add("Similar communication styles");
+        if (close(a, b, STUDY_STYLE, 1)) reasons.add("Similar study/working style");
+        if (close(a, b, PRIVACY, 1)) reasons.add("Similar privacy expectations");
 
-    private boolean far(List<Integer> a, List<Integer> b, int idx, int tol) {
-        if (idx >= a.size() || idx >= b.size()) return false;
-        return Math.abs(val(a, idx) - val(b, idx)) >= tol;
-    }
-
-    private int score(List<Integer> a, List<Integer> b) {
-        int n = Math.min(a.size(), b.size());
-        if (n == 0) return 0;
-        double diff = 0;
-        for (int i = 0; i < n; i++) {
-            Integer ai = a.get(i) == null ? 0 : a.get(i);
-            Integer bi = b.get(i) == null ? 0 : b.get(i);
-            diff += Math.abs(ai - bi);
+        // Asymmetric compatibility
+        if (val(a, NOISE_TOL) <= 1 && val(b, NOISE_TOL) >= 2) {
+            reasons.add("They can accommodate your need for quiet");
         }
-        return (int) Math.round(100 - (diff / n / 4.0) * 100.0);
+        if (val(b, NOISE_TOL) <= 1 && val(a, NOISE_TOL) >= 2) {
+            reasons.add("You can accommodate their need for quiet");
+        }
+
+        // Guest frequency complementarity
+        if (Math.abs(val(a, GUEST_FREQ) - val(b, GUEST_FREQ)) >= 2) {
+            if (val(a, GUEST_FREQ) >= 3 && val(b, GUEST_FREQ) <= 1) {
+                reasons.add("You're social, they prefer quiet - good balance");
+            } else if (val(b, GUEST_FREQ) >= 3 && val(a, GUEST_FREQ) <= 1) {
+                reasons.add("They're social, you prefer quiet - good balance");
+            }
+        }
+
+        // No smoking conflicts
+        if (val(a, SMOKING_OK) == 0 && val(b, SMOKING_OK) == 0) {
+            reasons.add("Both prefer smoke-free environment");
+        }
+
+        return reasons;
+    }
+
+    /* ---------- Utility methods ---------- */
+
+    private boolean close(List<Integer> a, List<Integer> b, int idx, int tolerance) {
+        if (idx >= a.size() || idx >= b.size()) return false;
+        return Math.abs(val(a, idx) - val(b, idx)) <= tolerance;
+    }
+
+    private boolean far(List<Integer> a, List<Integer> b, int idx, int tolerance) {
+        if (idx >= a.size() || idx >= b.size()) return false;
+        return Math.abs(val(a, idx) - val(b, idx)) >= tolerance;
+    }
+
+    /**
+     * Legacy scoring method - kept for backward compatibility
+     * Consider using hybridCompatibilityScore instead
+     */
+    private int score(List<Integer> a, List<Integer> b) {
+        return hybridCompatibilityScore(a, b);
     }
 
     private int val(List<Integer> a, int idx) {
         return (idx >= 0 && idx < a.size() && a.get(idx) != null) ? a.get(idx) : 0;
+    }
+
+    /* ---------- Additional utility methods for testing/debugging ---------- */
+
+    /**
+     * Get detailed compatibility breakdown for debugging
+     */
+    public String getCompatibilityBreakdown(List<Integer> a, List<Integer> b) {
+        if (hasDealBreakers(a, b)) {
+            return "DEAL BREAKERS DETECTED - Match rejected";
+        }
+
+        StringBuilder breakdown = new StringBuilder();
+        breakdown.append("Compatibility Breakdown:\n");
+        breakdown.append(String.format("Smoking: %.1f/%.1f\n",
+                calculateFactorScore(a, b, SMOKING_OK, SMOKING_WEIGHT, true), SMOKING_WEIGHT));
+        breakdown.append(String.format("Cleanliness: %.1f/%.1f\n",
+                calculateFactorScore(a, b, CLEANLINESS, CLEANLINESS_WEIGHT, false), CLEANLINESS_WEIGHT));
+        breakdown.append(String.format("Communication: %.1f/%.1f\n",
+                calculateFactorScore(a, b, COMMUNICATION, COMMUNICATION_WEIGHT, false), COMMUNICATION_WEIGHT));
+        breakdown.append(String.format("Sleep: %.1f/%.1f\n",
+                calculateFactorScore(a, b, SLEEP_TIME, SLEEP_TIME_WEIGHT, false), SLEEP_TIME_WEIGHT));
+        breakdown.append(String.format("Noise: %.1f/%.1f\n",
+                calculateAsymmetricNoiseScore(a, b, NOISE_TOL_WEIGHT), NOISE_TOL_WEIGHT));
+
+        return breakdown.toString();
     }
 }

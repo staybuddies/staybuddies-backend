@@ -7,5 +7,5 @@ public class MessageDto {
     private Long id;
     private boolean fromMe;
     private String text;
-    private String time;  // ISO string
+    private String time;
 }

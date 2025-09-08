@@ -35,7 +35,6 @@ public class AuthApiController {
         this.roomFinderRepository = roomFinderRepository;
     }
 
-    // AuthApiController.java
     @PostMapping("/authenticate")
     public ResponseEntity<?> authenticate(@RequestBody LoginRequest req) {
         try {

@@ -12,7 +12,6 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import org.springframework.http.HttpStatus;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
@@ -27,6 +26,9 @@ public class MessageService {
     private final MessageThreadRepository threadRepo;
     private final MessageRepository messageRepo;
 
+
+    private final PushNotificationService pushSvc;
+
     /* ---------------------- list my conversations ---------------------- */
     @Transactional(readOnly = true)
     public List<ConversationDto> threadsFor(String email) {
@@ -40,7 +42,7 @@ public class MessageService {
     /* ---------------------- helpers ---------------------- */
     private RoomFinder me(String email) {
         return userRepo.findByEmail(email)
-                .orElseThrow(() -> new UsernameNotFoundException(email));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED));
     }
 
     /* ---------------------- list threads (with eager user info) ---------------------- */
@@ -51,7 +53,7 @@ public class MessageService {
         return threads.stream().map(t -> toConversationDto(t, me)).toList();
     }
 
-    /* ---------------------- ensure/get thread by OTHER USER ID (using my email) ---------------------- */
+    /* ---------------------- ensure/get thread by OTHER USER ID ---------------------- */
     @Transactional
     public Long ensureThreadByEmail(String myEmail, Long otherId) {
         RoomFinder me = userRepo.findByEmail(myEmail)
@@ -110,6 +112,7 @@ public class MessageService {
                 .toList();
     }
 
+    /* ---------------------- send message (+ push) ---------------------- */
     @Transactional
     public MessageDto send(String myEmail, Long threadId, String content) {
         if (content == null || content.isBlank())
@@ -131,6 +134,13 @@ public class MessageService {
         m.setContent(content.trim());
         m.setReadByOther(false);
         m = messageRepo.save(m);
+
+        // receiver for notification
+        RoomFinder receiver = t.getUser1().getId().equals(me.getId()) ? t.getUser2() : t.getUser1();
+
+        // async push (FCM + WebSocket)
+        pushSvc.notifyNewMessage(receiver, me, t.getId(), m);
+
         return toMessageDto(m, me.getId());
     }
 
@@ -149,7 +159,6 @@ public class MessageService {
             throw new ThreadNotOwned(other);
         }
 
-        // Requires MessageRepository.markReadByOther(...)
         return messageRepo.markReadByOther(threadId, me.getId());
     }
 
@@ -191,6 +200,9 @@ public class MessageService {
     @Setter
     public static class ThreadNotOwned extends RuntimeException {
         private final Long otherUserId;
-        public ThreadNotOwned(Long otherUserId) { this.otherUserId = otherUserId; }
+
+        public ThreadNotOwned(Long otherUserId) {
+            this.otherUserId = otherUserId;
+        }
     }
 }

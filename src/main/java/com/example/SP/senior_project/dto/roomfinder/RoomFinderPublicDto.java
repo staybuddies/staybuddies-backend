@@ -19,4 +19,6 @@ public class RoomFinderPublicDto {
     // From quiz
     private List<String> lifestyleTags; // e.g. ["Early bird","Very tidy","Needs quiet"]
     private List<String> whyYouMatch;
+
+    private String photoUrl;
 }

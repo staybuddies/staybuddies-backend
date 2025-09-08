@@ -3,12 +3,10 @@ package com.example.SP.senior_project.api.v1.controller;
 import com.example.SP.senior_project.dto.roomfinder.RoomFinderPublicDto;
 import com.example.SP.senior_project.service.PublicProfileService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequiredArgsConstructor
@@ -16,6 +14,13 @@ import org.springframework.web.bind.annotation.RestController;
 class PublicProfileController {
 
     private final PublicProfileService svc;
+    @GetMapping("/public")
+    public Page<RoomFinderPublicDto> featured(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "8") int size
+    ) {
+        return svc.featured(Math.max(0, page), Math.max(1, size));
+    }
 
     @GetMapping("/{id}/public")
     public RoomFinderPublicDto publicProfile(

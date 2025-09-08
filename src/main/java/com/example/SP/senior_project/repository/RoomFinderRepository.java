@@ -14,4 +14,6 @@ public interface RoomFinderRepository extends JpaRepository<RoomFinder, Long> {
     Page<RoomFinder> findByNameContainingIgnoreCaseOrEmailContainingIgnoreCase(
             String name, String email, Pageable pageable);
 
+    Page<RoomFinder> findByActiveTrue(Pageable pageable);
+
 }

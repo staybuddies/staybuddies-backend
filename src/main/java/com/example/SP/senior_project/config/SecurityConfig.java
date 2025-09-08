@@ -112,6 +112,9 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/v1/room-finder").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/authenticate").permitAll()
                         .requestMatchers("/api/v1/verify-email/**").permitAll()              // <-- change here
+                        .requestMatchers(HttpMethod.GET,
+                                "/api/v1/room-finder/public",
+                                "/api/v1/room-finder/*/public").permitAll()
                         .requestMatchers("/api/v1/verifications/student-id/**").authenticated()
                         .requestMatchers("/api/v1/matches/**", "/api/v1/messages/**").authenticated()
                         .requestMatchers(HttpMethod.OPTIONS, "/api/**").permitAll()
