@@ -130,6 +130,11 @@ public class RoomFinderController {
         return roomFinderService.updatePreferences(ud.getUsername(), dto);
     }
 
+    @GetMapping("/me/behavioral")
+    public BehavioralDto getBehavioral(@AuthenticationPrincipal UserDetails ud) {
+        return roomFinderService.getBehavioral(ud.getUsername());
+    }
+
     @PutMapping("/me/behavioral")
     public BehavioralDto saveBehavioral(@AuthenticationPrincipal UserDetails ud,
                                         @RequestBody BehavioralDto dto) {

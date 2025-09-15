@@ -17,15 +17,9 @@ import java.util.Map;
 @Configuration
 public class FirebaseConfig {
 
-    /**
-     * Option A: path to JSON file, e.g. file:/etc/keys/fb.json or /app/secret.json
-     */
     @Value("${firebase.service-account:}")
     private String serviceAccountPathOrEmpty;
 
-    /**
-     * Option B: env or property containing the JSON itself
-     */
     @Value("${firebase.credentials.json:}")
     private String inlineJsonOrEmpty;
 
@@ -45,7 +39,6 @@ public class FirebaseConfig {
                 creds = GoogleCredentials.fromStream(in);
             }
         } else {
-            // Fall back to ADC if present
             creds = GoogleCredentials.getApplicationDefault();
         }
 

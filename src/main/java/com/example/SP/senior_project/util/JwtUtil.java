@@ -24,7 +24,6 @@ public class JwtUtil {
     @Value("${jwt.secret}")
     private String SECRET_KEY;
 
-    /* ====== extraction ====== */
     public String extractEmail(String jwt) {
         return extractClaim(jwt, Claims::getSubject);
     }
@@ -55,7 +54,6 @@ public class JwtUtil {
                 .getBody();
     }
 
-    /* ====== validation ====== */
     public boolean validateToken(String jwt, UserDetails userDetails) {
         String username = extractEmail(jwt);
         return username != null

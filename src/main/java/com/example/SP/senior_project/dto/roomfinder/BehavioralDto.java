@@ -7,5 +7,13 @@ import lombok.Data;
 public class BehavioralDto {
     private Boolean locationSharing;
     private Boolean emailNotification;
-    // whatever else you track…
+
+
+    // NEW: strings “HH:mm” to keep client/server simple
+    private String bedtime;   // "23:00"
+    private String wakeTime;  // "07:00"
+
+    private Integer spendFood;
+    private Integer spendEntertainment;
+    private Integer spendUtilities;
 }

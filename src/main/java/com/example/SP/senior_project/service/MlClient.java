@@ -75,6 +75,16 @@ public class MlClient {
         }
     }
 
+    public boolean ping() {
+        var url = UriComponentsBuilder.fromHttpUrl(mlBase).path("/health").toUriString();
+        try {
+            var resp = mlRestTemplate.getForEntity(url, String.class);
+            return resp.getStatusCode().is2xxSuccessful();
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
     @Data
     @JsonIgnoreProperties(ignoreUnknown = true) // FastAPI also returns "debug", etc.
     public static class AnalyzeResponse {

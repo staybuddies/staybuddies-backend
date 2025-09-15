@@ -34,4 +34,15 @@ public class QuizController {
                           @RequestBody QuizSubmissionDto req) {
         return quizService.saveForUser(ud.getUsername(), req);
     }
+
+    @GetMapping("/room-finder/me/quiz")
+    public QuizDto getMine(@AuthenticationPrincipal UserDetails ud) {
+        return quizService.getForUser(ud.getUsername());
+    }
+
+    @PostMapping("/room-finder/me/quiz")
+    public QuizDto saveMine(@AuthenticationPrincipal UserDetails ud,
+                            @RequestBody QuizSubmissionDto req) {
+        return quizService.saveForUser(ud.getUsername(), req);
+    }
 }

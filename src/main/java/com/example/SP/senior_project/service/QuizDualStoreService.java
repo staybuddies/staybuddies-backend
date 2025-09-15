@@ -1,4 +1,3 @@
-// src/main/java/com/example/SP/senior_project/service/QuizDualStoreService.java
 package com.example.SP.senior_project.service;
 
 import com.example.SP.senior_project.dto.quiz.QuizDto;
@@ -53,7 +52,6 @@ public class QuizDualStoreService {
                     r.setRoomFinder(user);
                     return r;
                 });
-        // copy to avoid persistent list surprises
         resp.setAnswers(new ArrayList<>(answers));
         responseRepo.save(resp);
 
@@ -68,7 +66,6 @@ public class QuizDualStoreService {
         quiz.setTotalScore(answers.stream().mapToInt(Integer::intValue).sum());
         quizRepo.save(quiz);
 
-        // return the unified DTO
         var dto = new QuizDto();
         dto.setAnswers(answers);
         dto.setTotalScore(quiz.getTotalScore());

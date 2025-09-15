@@ -5,6 +5,7 @@ import jakarta.persistence.*;
 import lombok.Data;
 
 import java.time.LocalDate;
+import java.time.LocalTime;
 
 @Entity
 @Data
@@ -62,6 +63,19 @@ public class RoomFinder extends AbstractAuditableEntity {
 
     @Column(name = "fcm_token", length = 512)
     private String fcmToken;
+
+    /* ---------- NEW behavior fields ---------- */
+    @Column(name = "bedtime")
+    private LocalTime bedtime;      // e.g., 23:00
+    @Column(name = "wake_time")
+    private LocalTime wakeTime;     // e.g., 07:00
+
+    @Column(name = "spend_food")
+    private Integer spendFood;          // THB / month
+    @Column(name = "spend_entertainment")
+    private Integer spendEntertainment; // THB / month
+    @Column(name = "spend_utilities")
+    private Integer spendUtilities;
 
 
 }

@@ -1,9 +1,7 @@
+// src/main/java/com/example/SP/senior_project/service/RoomFinderService.java
 package com.example.SP.senior_project.service;
 
-import com.example.SP.senior_project.dto.roomfinder.BehavioralDto;
-import com.example.SP.senior_project.dto.roomfinder.PreferencesDto;
-import com.example.SP.senior_project.dto.roomfinder.RoomFinderDto;
-import com.example.SP.senior_project.dto.roomfinder.RoomFinderUpdateDto;
+import com.example.SP.senior_project.dto.roomfinder.*;
 import com.example.SP.senior_project.mapper.RoomFinderMapper;
 import com.example.SP.senior_project.model.RoomFinder;
 import com.example.SP.senior_project.repository.RoomFinderRepository;
@@ -17,9 +15,7 @@ import org.springframework.stereotype.Service;
 public class RoomFinderService {
 
     private final RoomFinderRepository repo;
-
     private final RoomFinderMapper mapper;
-
     private final PasswordEncoder passwordEncoder;
 
     public RoomFinderDto findDtoByEmail(String email) {
@@ -32,15 +28,13 @@ public class RoomFinderService {
         RoomFinder rf = repo.findByEmail(email)
                 .orElseThrow(() -> new UsernameNotFoundException(email));
 
-        // encode only when client actually wants to change it
         if (dto.getPassword() != null && !dto.getPassword().isBlank()) {
             rf.setPassword(passwordEncoder.encode(dto.getPassword()));
-            dto.setPassword(null); // prevent mapper from overwriting encoded value
+            dto.setPassword(null);
         }
-
-        mapper.updateFromDto(dto, rf); // thanks to IGNORE, nulls won't clobber fields
+        mapper.updateFromDto(dto, rf);
         repo.save(rf);
-        return mapper.toDto(rf); // no password in response anymore
+        return mapper.toDto(rf);
     }
 
     public PreferencesDto updatePreferences(String email, PreferencesDto dto) {
@@ -49,6 +43,13 @@ public class RoomFinderService {
         mapper.updateFromPreferences(dto, rf);
         repo.save(rf);
         return mapper.toPreferencesDto(rf);
+    }
+
+    /* NEW: read + write for behavior */
+    public BehavioralDto getBehavioral(String email) {
+        RoomFinder rf = repo.findByEmail(email)
+                .orElseThrow(() -> new UsernameNotFoundException(email));
+        return mapper.toBehavioralDto(rf);
     }
 
     public BehavioralDto updateBehavioral(String email, BehavioralDto dto) {

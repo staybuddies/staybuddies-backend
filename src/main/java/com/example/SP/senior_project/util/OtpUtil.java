@@ -8,9 +8,6 @@ public final class OtpUtil {
     private OtpUtil() {
     }
 
-    /**
-     * 6-digit numeric code, zero-padded (e.g. 004219)
-     */
     public static String sixDigits() {
         return "%06d".formatted(RND.nextInt(1_000_000));
     }

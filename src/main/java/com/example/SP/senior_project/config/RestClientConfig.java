@@ -1,4 +1,3 @@
-// RestClientConfig.java
 package com.example.SP.senior_project.config;
 
 import java.time.Duration;

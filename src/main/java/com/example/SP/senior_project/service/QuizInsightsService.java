@@ -22,27 +22,33 @@ public class QuizInsightsService {
     private final RoomFinderRepository userRepo;
     private final QuizResponseRepository quizRepo;
 
-    // ----- Quiz question indexes -----
-    private static final int CLEANLINESS = 0; // 0..4 (low..high)
-    private static final int NOISE_TOL = 1; // 0..4 (needs quiet..ok with noise)
-    private static final int SLEEP_TIME = 2; // 0..4 (early..late)
-    private static final int STUDY_STYLE = 3; // 0..4 (quiet/fixed..flexible)
-    private static final int GUEST_FREQ = 4; // 0..4 (rare..frequent)
-    private static final int SMOKING_OK = 5; // 0..4 (0=no smokers, 4=ok)
+    // ----- Quiz question indexes (0-based; answers are 1..5) -----
+    private static final int CLEANLINESS   = 0; // 0..4 (low..high) -> answers 1..5 in DB
+    private static final int NOISE_TOL     = 1; // 0..4 (needs quiet..ok with noise)
+    private static final int SLEEP_TIME    = 2; // 0..4 (early..late)
+    private static final int STUDY_STYLE   = 3; // 0..4 (quiet/fixed..flexible)
+    private static final int GUEST_FREQ    = 4; // 0..4 (rare..frequent)
+    private static final int SMOKING_OK    = 5; // 0..4 (0=no smokers, 4=ok)
     private static final int COMMUNICATION = 6; // 0..4 (poor..excellent)
-    private static final int PRIVACY = 7; // 0..4 (low..high)
+    private static final int PRIVACY       = 7; // 0..4 (low..high)
 
-    // ----- Compatibility weights (adjust based on importance) -----
-    private static final double SMOKING_WEIGHT = 3.0;      // Critical - deal breaker potential
-    private static final double CLEANLINESS_WEIGHT = 2.5;  // Very important for daily life
-    private static final double COMMUNICATION_WEIGHT = 2.0; // Essential for conflict resolution
-    private static final double SLEEP_TIME_WEIGHT = 1.5;   // Important for peaceful coexistence
-    private static final double NOISE_TOL_WEIGHT = 1.5;    // Important for studying/sleeping
-    private static final double PRIVACY_WEIGHT = 1.2;      // Moderately important
-    private static final double STUDY_STYLE_WEIGHT = 1.0;  // Nice to have similarity
-    private static final double GUEST_FREQ_WEIGHT = 0.8;   // Least critical
+    // NEW: make Q9 + Q10 special & heavier
+    private static final int PRICE_RANGE   = 8; // 1..5 → budget bracket (THB)
+    private static final int NATIONALITY   = 9; // 1..5 → nationality/region group
 
-    // ----- Deal breaker thresholds -----
+    // ----- Weights (price & nationality are strongest) -----
+    private static final double PRICE_WEIGHT        = 4.0; // strongest
+    private static final double NATIONALITY_WEIGHT  = 3.5; // second-strongest
+    private static final double SMOKING_WEIGHT      = 3.0;
+    private static final double CLEANLINESS_WEIGHT  = 2.5;
+    private static final double COMMUNICATION_WEIGHT= 2.0;
+    private static final double SLEEP_TIME_WEIGHT   = 1.5;
+    private static final double NOISE_TOL_WEIGHT    = 1.5;
+    private static final double PRIVACY_WEIGHT      = 1.2;
+    private static final double STUDY_STYLE_WEIGHT  = 1.0;
+    private static final double GUEST_FREQ_WEIGHT   = 0.8;
+
+    // ----- Deal breaker thresholds (keep your originals; price/nationality weighted only) -----
     private static final int SMOKING_DEAL_BREAKER_THRESHOLD = 3;
     private static final int CLEANLINESS_DEAL_BREAKER_THRESHOLD = 3;
     private static final int COMMUNICATION_DEAL_BREAKER_THRESHOLD = 2;
@@ -84,6 +90,10 @@ public class QuizInsightsService {
         if (val(a, PRIVACY) >= 3) out.add("Respects personal space");
         if (val(a, SMOKING_OK) == 0) out.add("Non-smoker lifestyle");
         if (val(a, GUEST_FREQ) <= 1) out.add("Maintains a peaceful environment");
+
+        // New, soft descriptions (just for UX)
+        out.add("Budget bracket: " + describePrice(val(a, PRICE_RANGE)));
+        out.add("Cultural group: " + describeNationality(val(a, NATIONALITY)));
         return out;
     }
 
@@ -95,6 +105,10 @@ public class QuizInsightsService {
         if (val(a, COMMUNICATION) >= 3) out.add("Good communication skills");
         if (val(a, SLEEP_TIME) <= 1) out.add("Early riser compatibility");
         if (val(a, SLEEP_TIME) >= 3) out.add("Night owl compatibility");
+
+        // Extra hints
+        out.add("Budget compatibility emphasized");
+        out.add("Nationality/region compatibility emphasized");
         return out;
     }
 
@@ -107,6 +121,9 @@ public class QuizInsightsService {
         if (val(a, PRIVACY) >= 3) out.add("Disrespect for personal space");
         if (val(a, COMMUNICATION) <= 1) out.add("Poor communication");
         if (val(a, NOISE_TOL) == 0) out.add("Consistently noisy behavior");
+
+        // NOTE: price & nationality are NOT hard deal-breakers by default.
+        // If you want to make them hard blockers, uncomment in hasDealBreakers(...)
         return out;
     }
 
@@ -139,13 +156,16 @@ public class QuizInsightsService {
         else if (val(a, COMMUNICATION) >= 2) tags.add("Good communicator");
         else tags.add("Reserved communicator");
 
+        // New tags
+        tags.add("Budget: " + describePrice(val(a, PRICE_RANGE)));
+        tags.add("Region: " + describeNationality(val(a, NATIONALITY)));
+
         return tags;
     }
 
     /* ---------- Hybrid Compatibility Algorithm ---------- */
 
-    private record Stats(int avg, int best, long high, long total) {
-    }
+    private record Stats(int avg, int best, long high, long total) {}
 
     private Stats computeHybridCompatibilityStats(Long meUserId, List<Integer> myAnswers) {
         int best = 0;
@@ -155,7 +175,6 @@ public class QuizInsightsService {
 
         for (QuizResponse q : quizRepo.findAll()) {
             if (q == null || q.getAnswers() == null || q.getAnswers().isEmpty()) continue;
-
             // Skip self
             if (q.getRoomFinder() != null && Objects.equals(q.getRoomFinder().getId(), meUserId)) continue;
 
@@ -170,81 +189,75 @@ public class QuizInsightsService {
         return new Stats(avg, best, high, total);
     }
 
-    /**
-     * Hybrid compatibility algorithm combining deal-breaker filtering with weighted scoring
-     */
+    /** Hybrid compatibility algorithm combining deal-breaker filtering with weighted scoring */
     private int hybridCompatibilityScore(List<Integer> a, List<Integer> b) {
-        // Phase 1: Check for deal breakers (immediate disqualification)
         if (hasDealBreakers(a, b)) {
-            return 0; // Complete incompatibility
+            return 0;
         }
-
-        // Phase 2: Calculate weighted compatibility score
         return calculateWeightedCompatibility(a, b);
     }
 
-    /**
-     * Check for critical incompatibilities that should eliminate a match
-     */
+    /** Check for critical incompatibilities that should eliminate a match */
     private boolean hasDealBreakers(List<Integer> a, List<Integer> b) {
         // Smoking incompatibility
-        if (val(a, SMOKING_OK) == 0 && val(b, SMOKING_OK) >= SMOKING_DEAL_BREAKER_THRESHOLD) {
-            return true;
-        }
-        if (val(b, SMOKING_OK) == 0 && val(a, SMOKING_OK) >= SMOKING_DEAL_BREAKER_THRESHOLD) {
-            return true;
-        }
+        if (val(a, SMOKING_OK) == 0 && val(b, SMOKING_OK) >= SMOKING_DEAL_BREAKER_THRESHOLD) return true;
+        if (val(b, SMOKING_OK) == 0 && val(a, SMOKING_OK) >= SMOKING_DEAL_BREAKER_THRESHOLD) return true;
 
         // Extreme cleanliness mismatch
         int cleanDiff = Math.abs(val(a, CLEANLINESS) - val(b, CLEANLINESS));
         if (cleanDiff >= CLEANLINESS_DEAL_BREAKER_THRESHOLD &&
-                (val(a, CLEANLINESS) == 4 || val(b, CLEANLINESS) == 4)) {
-            return true;
-        }
+                (val(a, CLEANLINESS) == 4 || val(b, CLEANLINESS) == 4)) return true;
 
         // Communication breakdown potential
-        if (val(a, COMMUNICATION) <= 1 && val(b, COMMUNICATION) <= 1) {
-            return true; // Both poor communicators
-        }
+        if (val(a, COMMUNICATION) <= 1 && val(b, COMMUNICATION) <= 1) return true;
 
-        // Extreme sleep schedule mismatch (>3 hour difference typically)
+        // Extreme sleep schedule mismatch
         int sleepDiff = Math.abs(val(a, SLEEP_TIME) - val(b, SLEEP_TIME));
-        if (sleepDiff == 4) {
-            return true; // Early bird vs extreme night owl
-        }
+        if (sleepDiff == 4) return true;
+
+        // OPTIONAL: Uncomment to make price a hard blocker if very far apart (>=3 brackets)
+        // if (Math.abs(val(a, PRICE_RANGE) - val(b, PRICE_RANGE)) >= 3) return true;
+
+        // OPTIONAL: Uncomment to make nationality a hard blocker if different
+        // if (val(a, NATIONALITY) != 0 && val(b, NATIONALITY) != 0 && val(a, NATIONALITY) != val(b, NATIONALITY)) return true;
 
         return false;
     }
 
-    /**
-     * Calculate weighted compatibility score with asymmetric considerations
-     */
+    /** Weighted compatibility (price & nationality dominate) */
     private int calculateWeightedCompatibility(List<Integer> a, List<Integer> b) {
         double totalScore = 0;
         double totalWeight = 0;
 
-        // Critical factors (higher weights)
-        totalScore += calculateFactorScore(a, b, SMOKING_OK, SMOKING_WEIGHT, true);
+        // Strongest factors first
+        totalScore += calculatePriceScore(a, b, PRICE_WEIGHT);
+        totalWeight += PRICE_WEIGHT;
+
+        totalScore += calculateNationalityScore(a, b, NATIONALITY_WEIGHT);
+        totalWeight += NATIONALITY_WEIGHT;
+
+        // Critical
+        totalScore += calculateFactorScore(a, b, SMOKING_OK, SMOKING_WEIGHT);
         totalWeight += SMOKING_WEIGHT;
 
-        totalScore += calculateFactorScore(a, b, CLEANLINESS, CLEANLINESS_WEIGHT, false);
+        totalScore += calculateFactorScore(a, b, CLEANLINESS, CLEANLINESS_WEIGHT);
         totalWeight += CLEANLINESS_WEIGHT;
 
-        totalScore += calculateFactorScore(a, b, COMMUNICATION, COMMUNICATION_WEIGHT, false);
+        totalScore += calculateFactorScore(a, b, COMMUNICATION, COMMUNICATION_WEIGHT);
         totalWeight += COMMUNICATION_WEIGHT;
 
-        // Important factors (medium weights)
-        totalScore += calculateFactorScore(a, b, SLEEP_TIME, SLEEP_TIME_WEIGHT, false);
+        // Important
+        totalScore += calculateFactorScore(a, b, SLEEP_TIME, SLEEP_TIME_WEIGHT);
         totalWeight += SLEEP_TIME_WEIGHT;
 
         totalScore += calculateAsymmetricNoiseScore(a, b, NOISE_TOL_WEIGHT);
         totalWeight += NOISE_TOL_WEIGHT;
 
-        totalScore += calculateFactorScore(a, b, PRIVACY, PRIVACY_WEIGHT, false);
+        totalScore += calculateFactorScore(a, b, PRIVACY, PRIVACY_WEIGHT);
         totalWeight += PRIVACY_WEIGHT;
 
-        // Nice-to-have factors (lower weights)
-        totalScore += calculateFactorScore(a, b, STUDY_STYLE, STUDY_STYLE_WEIGHT, false);
+        // Nice-to-have
+        totalScore += calculateFactorScore(a, b, STUDY_STYLE, STUDY_STYLE_WEIGHT);
         totalWeight += STUDY_STYLE_WEIGHT;
 
         totalScore += calculateAsymmetricGuestScore(a, b, GUEST_FREQ_WEIGHT);
@@ -253,79 +266,59 @@ public class QuizInsightsService {
         return (int) Math.round((totalScore / totalWeight) * 100);
     }
 
-    /**
-     * Calculate compatibility score for a single factor
-     */
-    private double calculateFactorScore(List<Integer> a, List<Integer> b, int index,
-                                        double weight, boolean asymmetric) {
+    /** Generic factor score (ordinal 1..5; smaller difference → better) */
+    private double calculateFactorScore(List<Integer> a, List<Integer> b, int index, double weight) {
         int valA = val(a, index);
         int valB = val(b, index);
         int diff = Math.abs(valA - valB);
 
-        // Perfect match
-        if (diff == 0) return weight;
-
-        // Good compatibility
-        if (diff == 1) return weight * 0.85;
-
-        // Moderate compatibility
-        if (diff == 2) return weight * 0.6;
-
-        // Poor compatibility
-        if (diff == 3) return weight * 0.3;
-
-        // Very poor compatibility
-        return weight * 0.1;
+        if (diff == 0) return weight;         // perfect
+        if (diff == 1) return weight * 0.85;  // good
+        if (diff == 2) return weight * 0.60;  // moderate
+        if (diff == 3) return weight * 0.30;  // poor
+        return weight * 0.10;                 // very poor
     }
 
-    /**
-     * Asymmetric noise tolerance scoring
-     * Someone okay with noise can live with someone who needs quiet, but not vice versa
-     */
+    /** Price scoring — same bracket best; farther brackets drop quickly */
+    private double calculatePriceScore(List<Integer> a, List<Integer> b, double weight) {
+        return calculateFactorScore(a, b, PRICE_RANGE, weight);
+    }
+
+    /** Nationality scoring — equal best; adjacent groups ok; far groups lower */
+    private double calculateNationalityScore(List<Integer> a, List<Integer> b, double weight) {
+        int va = val(a, NATIONALITY);
+        int vb = val(b, NATIONALITY);
+        int diff = Math.abs(va - vb);
+
+        if (diff == 0) return weight;
+        if (diff == 1) return weight * 0.80;
+        if (diff == 2) return weight * 0.55;
+        if (diff == 3) return weight * 0.35;
+        return weight * 0.20;
+    }
+
+    /** Asymmetric noise tolerance (keep your original logic) */
     private double calculateAsymmetricNoiseScore(List<Integer> a, List<Integer> b, double weight) {
         int noiseA = val(a, NOISE_TOL);
         int noiseB = val(b, NOISE_TOL);
 
-        // If both need quiet or both okay with noise
-        if (Math.abs(noiseA - noiseB) <= 1) {
-            return weight;
-        }
-
-        // If one needs quiet and other is very tolerant, it can work
-        if ((noiseA <= 1 && noiseB >= 3) || (noiseB <= 1 && noiseA >= 3)) {
-            return weight * 0.7;
-        }
-
-        // Moderate mismatch
+        if (Math.abs(noiseA - noiseB) <= 1) return weight;
+        if ((noiseA <= 1 && noiseB >= 3) || (noiseB <= 1 && noiseA >= 3)) return weight * 0.7;
         return weight * 0.4;
     }
 
-    /**
-     * Asymmetric guest frequency scoring
-     * Someone who rarely has guests can live with someone social, but very social person
-     * might not be satisfied with someone who never has guests
-     */
+    /** Asymmetric guest frequency (keep your original logic) */
     private double calculateAsymmetricGuestScore(List<Integer> a, List<Integer> b, double weight) {
         int guestA = val(a, GUEST_FREQ);
         int guestB = val(b, GUEST_FREQ);
 
         int diff = Math.abs(guestA - guestB);
-
-        // Similar guest frequency
         if (diff <= 1) return weight;
-
-        // One social, one not - can work with some compromise
         if (diff == 2) return weight * 0.7;
-
-        // Very different social needs
         if (diff >= 3) {
-            // If one person is very social (4) and other rarely has guests (0-1)
-            if ((guestA >= 3 && guestB <= 1) || (guestB >= 3 && guestA <= 1)) {
-                return weight * 0.3;
-            }
+            if ((guestA >= 3 && guestB <= 1) || (guestB >= 3 && guestA <= 1)) return weight * 0.3;
             return weight * 0.5;
         }
-
         return weight * 0.4;
     }
 
@@ -349,12 +342,18 @@ public class QuizInsightsService {
 
         var reasons = new ArrayList<String>();
 
-        // Check for strong compatibility factors
+        // Strong compatibility factors
         if (close(a, b, SLEEP_TIME, 1)) reasons.add("Similar sleep schedules");
         if (close(a, b, CLEANLINESS, 1)) reasons.add("Compatible cleanliness standards");
         if (close(a, b, COMMUNICATION, 1)) reasons.add("Similar communication styles");
         if (close(a, b, STUDY_STYLE, 1)) reasons.add("Similar study/working style");
         if (close(a, b, PRIVACY, 1)) reasons.add("Similar privacy expectations");
+
+        // Emphasize the two new heavy factors
+        if (close(a, b, PRICE_RANGE, 0)) reasons.add("Same rent budget bracket");
+        else if (close(a, b, PRICE_RANGE, 1)) reasons.add("Nearby rent budget brackets");
+
+        if (close(a, b, NATIONALITY, 0)) reasons.add("Same nationality/region group");
 
         // Asymmetric compatibility
         if (val(a, NOISE_TOL) <= 1 && val(b, NOISE_TOL) >= 2) {
@@ -388,28 +387,36 @@ public class QuizInsightsService {
         return Math.abs(val(a, idx) - val(b, idx)) <= tolerance;
     }
 
-    private boolean far(List<Integer> a, List<Integer> b, int idx, int tolerance) {
-        if (idx >= a.size() || idx >= b.size()) return false;
-        return Math.abs(val(a, idx) - val(b, idx)) >= tolerance;
-    }
-
-    /**
-     * Legacy scoring method - kept for backward compatibility
-     * Consider using hybridCompatibilityScore instead
-     */
-    private int score(List<Integer> a, List<Integer> b) {
-        return hybridCompatibilityScore(a, b);
-    }
-
     private int val(List<Integer> a, int idx) {
+        // translate 1..5 answers into 0..4 internally where you had comments,
+        // but keep arithmetic on 1..5; returning 0 for missing keeps it neutral/low.
         return (idx >= 0 && idx < a.size() && a.get(idx) != null) ? a.get(idx) : 0;
     }
 
-    /* ---------- Additional utility methods for testing/debugging ---------- */
+    private String describePrice(int v) {
+        return switch (v) {
+            case 1 -> "≤ 4,000 THB";
+            case 2 -> "4,001–6,000 THB";
+            case 3 -> "6,001–8,000 THB";
+            case 4 -> "8,001–10,000 THB";
+            case 5 -> "> 10,000 THB";
+            default -> "unspecified";
+        };
+    }
 
-    /**
-     * Get detailed compatibility breakdown for debugging
-     */
+    private String describeNationality(int v) {
+        return switch (v) {
+            case 1 -> "Thai";
+            case 2 -> "ASEAN (non-Thai)";
+            case 3 -> "East/South Asia";
+            case 4 -> "Europe/Americas/Oceania";
+            case 5 -> "Other / Prefer not to say";
+            default -> "unspecified";
+        };
+    }
+
+    /* ---------- Additional utility for debugging ---------- */
+
     public String getCompatibilityBreakdown(List<Integer> a, List<Integer> b) {
         if (hasDealBreakers(a, b)) {
             return "DEAL BREAKERS DETECTED - Match rejected";
@@ -417,17 +424,20 @@ public class QuizInsightsService {
 
         StringBuilder breakdown = new StringBuilder();
         breakdown.append("Compatibility Breakdown:\n");
+        breakdown.append(String.format("Price: %.1f/%.1f\n",
+                calculatePriceScore(a, b, PRICE_WEIGHT), PRICE_WEIGHT));
+        breakdown.append(String.format("Nationality: %.1f/%.1f\n",
+                calculateNationalityScore(a, b, NATIONALITY_WEIGHT), NATIONALITY_WEIGHT));
         breakdown.append(String.format("Smoking: %.1f/%.1f\n",
-                calculateFactorScore(a, b, SMOKING_OK, SMOKING_WEIGHT, true), SMOKING_WEIGHT));
+                calculateFactorScore(a, b, SMOKING_OK, SMOKING_WEIGHT), SMOKING_WEIGHT));
         breakdown.append(String.format("Cleanliness: %.1f/%.1f\n",
-                calculateFactorScore(a, b, CLEANLINESS, CLEANLINESS_WEIGHT, false), CLEANLINESS_WEIGHT));
+                calculateFactorScore(a, b, CLEANLINESS, CLEANLINESS_WEIGHT), CLEANLINESS_WEIGHT));
         breakdown.append(String.format("Communication: %.1f/%.1f\n",
-                calculateFactorScore(a, b, COMMUNICATION, COMMUNICATION_WEIGHT, false), COMMUNICATION_WEIGHT));
+                calculateFactorScore(a, b, COMMUNICATION, COMMUNICATION_WEIGHT), COMMUNICATION_WEIGHT));
         breakdown.append(String.format("Sleep: %.1f/%.1f\n",
-                calculateFactorScore(a, b, SLEEP_TIME, SLEEP_TIME_WEIGHT, false), SLEEP_TIME_WEIGHT));
+                calculateFactorScore(a, b, SLEEP_TIME, SLEEP_TIME_WEIGHT), SLEEP_TIME_WEIGHT));
         breakdown.append(String.format("Noise: %.1f/%.1f\n",
                 calculateAsymmetricNoiseScore(a, b, NOISE_TOL_WEIGHT), NOISE_TOL_WEIGHT));
-
         return breakdown.toString();
     }
 }
