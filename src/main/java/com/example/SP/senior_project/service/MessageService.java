@@ -25,8 +25,6 @@ public class MessageService {
     private final RoomFinderRepository userRepo;
     private final MessageThreadRepository threadRepo;
     private final MessageRepository messageRepo;
-
-
     private final PushNotificationService pushSvc;
 
     /* ---------------------- list my conversations ---------------------- */

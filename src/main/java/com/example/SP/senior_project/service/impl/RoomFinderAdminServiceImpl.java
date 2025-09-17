@@ -89,7 +89,7 @@ public class RoomFinderAdminServiceImpl implements RoomFinderAdminService {
         if (dto.getEmail() != null) u.setEmail(dto.getEmail());
         if (dto.getPhone() != null) u.setPhone(dto.getPhone());
         if (dto.getGender() != null) u.setGender(dto.getGender());
-        if (dto.getAge() != null) u.setAge(dto.getAge()); // Integer -> int
+        if (dto.getAge() != null) u.setAge(dto.getAge());
         if (dto.getLocation() != null) u.setLocation(dto.getLocation());
         if (dto.getUniversity() != null) u.setUniversity(dto.getUniversity());
         if (dto.getMajor() != null) u.setMajor(dto.getMajor());
@@ -98,7 +98,13 @@ public class RoomFinderAdminServiceImpl implements RoomFinderAdminService {
         if (dto.getLocationSharing() != null) u.setLocationSharing(dto.getLocationSharing());
         if (dto.getEmailNotification() != null) u.setEmailNotification(dto.getEmailNotification());
         if (dto.getJoinDate() != null) u.setJoinDate(dto.getJoinDate());
+
+
+        if (dto.getSchoolEmail() != null) u.setSchoolEmail(dto.getSchoolEmail());
+        if (dto.getEmailVerified() != null) u.setSchoolEmailVerified(dto.getEmailVerified());
+        if (dto.getIdentityVerified() != null) u.setIdVerified(dto.getIdentityVerified());
     }
+
 
     @Override
     @Transactional

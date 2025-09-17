@@ -1,9 +1,6 @@
 package com.example.SP.senior_project.api.v1.controller;
 
-import com.example.SP.senior_project.dto.roomfinder.BehavioralDto;
-import com.example.SP.senior_project.dto.roomfinder.PreferencesDto;
-import com.example.SP.senior_project.dto.roomfinder.RoomFinderDto;
-import com.example.SP.senior_project.dto.roomfinder.RoomFinderUpdateDto;
+import com.example.SP.senior_project.dto.roomfinder.*;
 import com.example.SP.senior_project.mapper.RoomFinderMapper;
 import com.example.SP.senior_project.model.RoomFinder;
 import com.example.SP.senior_project.model.constant.FileType;
@@ -19,10 +16,10 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 @RestController
@@ -55,22 +52,32 @@ public class RoomFinderController {
 
     @GetMapping("/me/photo")
     public ResponseEntity<?> myPhoto(@AuthenticationPrincipal UserDetails ud) {
-        RoomFinder me = repo.findByEmailIgnoreCase(ud.getUsername())
-                .orElse(null);
+        var me = repo.findByEmailIgnoreCase(ud.getUsername()).orElse(null);
         if (me == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
 
-        String url = fileService.getFileName(FileType.ROOMFINDER_PROFILE, me.getId());
-        if (url == null) return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                .body(Map.of("message", "No photo"));
-        return ResponseEntity.ok(Map.of("url", url));
+        String url = null;
+        try {
+            url = fileService.getFileName(FileType.ROOMFINDER_PROFILE, me.getId());
+        } catch (Exception ignore) {}
+
+        // Always 200; front-end can check "has"
+        return ResponseEntity.ok(Map.of(
+                "has", url != null,
+                "url", url
+        ));
     }
 
     @GetMapping("/{id}/photo")
     public ResponseEntity<?> photoById(@PathVariable Long id) {
-        String url = fileService.getFileName(FileType.ROOMFINDER_PROFILE, id);
-        if (url == null) return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                .body(Map.of("message", "No photo"));
-        return ResponseEntity.ok(Map.of("url", url));
+        String url = null;
+        try {
+            url = fileService.getFileName(FileType.ROOMFINDER_PROFILE, id);
+        } catch (Exception ignore) {}
+
+        return ResponseEntity.ok(Map.of(
+                "has", url != null,
+                "url", url
+        ));
     }
 
     @PostMapping("/me/photo")
@@ -140,7 +147,6 @@ public class RoomFinderController {
                                         @RequestBody BehavioralDto dto) {
         return roomFinderService.updateBehavioral(ud.getUsername(), dto);
     }
-
 
     @DeleteMapping("/{id}")
     public void delete(@PathVariable Long id) {

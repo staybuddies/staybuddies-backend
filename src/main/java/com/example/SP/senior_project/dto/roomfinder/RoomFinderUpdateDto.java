@@ -35,4 +35,8 @@ public class RoomFinderUpdateDto {
 
     @PastOrPresent(message = "Join date cannot be in the future")
     private LocalDate joinDate;
+    private Boolean emailVerified;     // from RoomFinder.schoolEmailVerified
+    private Boolean identityVerified;  // from RoomFinder.idVerified (or false if not present)
+
+    private String schoolEmail;
 }

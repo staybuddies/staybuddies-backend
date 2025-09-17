@@ -388,10 +388,21 @@ public class QuizInsightsService {
     }
 
     private int val(List<Integer> a, int idx) {
-        // translate 1..5 answers into 0..4 internally where you had comments,
-        // but keep arithmetic on 1..5; returning 0 for missing keeps it neutral/low.
-        return (idx >= 0 && idx < a.size() && a.get(idx) != null) ? a.get(idx) : 0;
+        // Neutral default if missing
+        if (a == null || idx < 0 || idx >= a.size() || a.get(idx) == null) return 3; // mid
+
+        int v = a.get(idx);
+
+        // Normalize: DB may store either 0..4 or 1..5
+        // - If 0..4, shift into 1..5
+        // - If already 1..5, keep
+        if (v >= 0 && v <= 4) v = v + 1;   // 0..4  -> 1..5
+        if (v < 1) v = 1;
+        if (v > 5) v = 5;
+
+        return v;
     }
+
 
     private String describePrice(int v) {
         return switch (v) {

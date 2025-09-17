@@ -35,6 +35,7 @@ public class MatchController {
     }
 
     /** Accept a pending request where I am the target. */
+
     @PostMapping("/{requestId}/accept")
     public ResponseEntity<Void> accept(
             @AuthenticationPrincipal UserDetails ud,

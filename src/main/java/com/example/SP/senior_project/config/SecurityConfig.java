@@ -75,17 +75,36 @@ public class SecurityConfig {
     }
 
     /* --------- CORS for API --------- */
+    /* --------- CORS for API --------- */
     @Bean
     CorsConfigurationSource corsConfigurationSource() {
         var cfg = new CorsConfiguration();
-        cfg.setAllowedOrigins(List.of("http://localhost:5173"));
-        cfg.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
-        cfg.setAllowedHeaders(List.of("Authorization", "Content-Type", "Accept"));
+
+        // Credentials + wildcard patterns are OK with *patterns* (NOT setAllowedOrigins)
         cfg.setAllowCredentials(true);
+
+        // Device-friendly patterns (LAN, localhost, https, and the rare "null" origin from WebViews)
+        cfg.setAllowedOriginPatterns(List.of(
+                "http://localhost:*",
+                "http://127.0.0.1:*",
+                "http://192.168.*:*",
+                "http://10.*.*.*:*",
+                "https://*",
+                "null"
+        ));
+
+        // Let preflight through with anything the browser asks for
+        cfg.setAllowedMethods(List.of("GET","POST","PUT","PATCH","DELETE","OPTIONS"));
+        cfg.setAllowedHeaders(List.of("*"));
+        // Nice-to-have: expose a couple headers you might return
+        cfg.setExposedHeaders(List.of("Authorization","Location","Content-Disposition"));
+        cfg.setMaxAge(3600L);
+
         var src = new UrlBasedCorsConfigurationSource();
         src.registerCorsConfiguration("/**", cfg);
         return src;
     }
+
 
     @Bean
     @Order(0)
@@ -109,24 +128,38 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(HttpMethod.POST, "/api/v1/room-finder").permitAll()
+                        // PUBLIC
+                        .requestMatchers(HttpMethod.POST,
+                                "/api/v1/room-finder",
+                                "/api/v1/room-finder/**"   // allow trailing slash (/)
+                        ).permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/authenticate").permitAll()
-                        .requestMatchers("/api/v1/verify-email/**").permitAll()              // <-- change here
+                        .requestMatchers("/api/v1/verify-email/**").permitAll()
                         .requestMatchers(HttpMethod.GET,
                                 "/api/v1/room-finder/public",
-                                "/api/v1/room-finder/*/public").permitAll()
+                                "/api/v1/room-finder/public/**",
+                                "/api/v1/room-finder/*/public",
+                                "/api/v1/room-finder/*/public/**"
+                        ).permitAll()
+
+                        // PRE-FLIGHT
+                        .requestMatchers(HttpMethod.OPTIONS, "/api/**").permitAll()
+                        .requestMatchers("/ws/**").permitAll()
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+
+                        // AUTHENTICATED
                         .requestMatchers("/api/v1/verifications/student-id/**").authenticated()
                         .requestMatchers("/api/v1/matches/**", "/api/v1/messages/**").authenticated()
-                        .requestMatchers(HttpMethod.OPTIONS, "/api/**").permitAll()
-                        .requestMatchers("/files/**").permitAll()
                         .requestMatchers("/api/v1/room-finder/**").authenticated()
+
                         .anyRequest().authenticated()
                 )
-                .authenticationManager(apiAuthManager())  // use API manager explicitly
+                .authenticationManager(apiAuthManager())
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
+
 
     /* --------- MVC chain (admin pages) --------- */
     @Bean

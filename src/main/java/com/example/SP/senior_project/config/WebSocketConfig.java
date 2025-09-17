@@ -11,18 +11,23 @@ import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerCo
 public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     @Override
-    public void configureMessageBroker(MessageBrokerRegistry config) {
-        // simple in-memory broker for topics + per-user queues
-        config.enableSimpleBroker("/topic", "/queue");
-        config.setApplicationDestinationPrefixes("/app"); // (UI isn’t using it now, ok)
-        config.setUserDestinationPrefix("/user");
+    public void configureMessageBroker(MessageBrokerRegistry registry) {
+        registry.enableSimpleBroker("/topic", "/queue");
+        registry.setApplicationDestinationPrefixes("/app");
+        registry.setUserDestinationPrefix("/user");
     }
 
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
-        // must match your frontend connect() URL
         registry.addEndpoint("/ws")
-                .setAllowedOriginPatterns("*")    // or "http://localhost:5173"
-                .withSockJS();                    // keep if your client uses SockJS
+                .setAllowedOriginPatterns(
+                        "http://localhost:*",
+                        "http://127.0.0.1:*",
+                        "http://192.168.*:*",
+                        "http://10.*:*",
+                        "http://*.local:*",
+                        "https://*"
+                )
+                .withSockJS(); // keep this to support iOS Safari
     }
 }

@@ -60,6 +60,9 @@ public class RoomFinder extends AbstractAuditableEntity {
     @Column(nullable = false)
     private int tokenVersion = 0;
 
+    @Column(name = "id_verified", nullable = false)
+    private boolean idVerified = false;
+
 
     @Column(name = "fcm_token", length = 512)
     private String fcmToken;

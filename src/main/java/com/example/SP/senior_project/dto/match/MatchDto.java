@@ -13,4 +13,5 @@ public class MatchDto {
     private String relationStatus; // NONE | PENDING_SENT | PENDING_RECEIVED | ACCEPTED | DECLINED
     private Long requestId;        // present if there is a request between you two
     private Long threadId;
+    private String photoUrl;
 }
