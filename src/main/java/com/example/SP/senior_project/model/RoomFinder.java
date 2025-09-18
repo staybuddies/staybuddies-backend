@@ -3,13 +3,18 @@ package com.example.SP.senior_project.model;
 import com.example.SP.senior_project.model.base.AbstractAuditableEntity;
 import jakarta.persistence.*;
 import lombok.Data;
+import com.example.SP.senior_project.model.constant.MatchStatus;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import org.hibernate.annotations.CreationTimestamp;
 
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
 
 @Entity
 @Data
-@Table(name = "room_finders")   // change table name to underscores
+@Table(name = "room_finders")   // changed table name to underscores
 public class RoomFinder extends AbstractAuditableEntity {
 
     @Column(nullable = false)
@@ -61,7 +66,7 @@ public class RoomFinder extends AbstractAuditableEntity {
     private int tokenVersion = 0;
 
     @Column(name = "id_verified", nullable = false)
-    private boolean idVerified = false;
+    private Boolean idVerified = false;
 
 
     @Column(name = "fcm_token", length = 512)
@@ -80,6 +85,8 @@ public class RoomFinder extends AbstractAuditableEntity {
     @Column(name = "spend_utilities")
     private Integer spendUtilities;
 
+    @Enumerated(EnumType.STRING)
+    private MatchStatus status = MatchStatus.UNMATCHED;
 
 }
 

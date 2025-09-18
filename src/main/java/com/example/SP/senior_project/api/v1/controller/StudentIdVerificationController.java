@@ -186,7 +186,6 @@ public class StudentIdVerificationController {
         d.setUniversityOnCard(v.getUniversityOnCard());
         d.setGradYearOnCard(v.getGradYearOnCard());
         d.setFrontUrl(storage.toPublicUrl(v.getFrontPath()));
-        // back/selfie are not used; keep fields null for client compatibility
         d.setBackUrl(null);
         d.setSelfieUrl(null);
         return d;

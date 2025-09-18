@@ -1,5 +1,6 @@
 package com.example.SP.senior_project.dto.roomfinder;
 
+import com.example.SP.senior_project.model.constant.MatchStatus;
 import jakarta.validation.constraints.*;
 import lombok.Data;
 import java.time.LocalDate;
@@ -39,4 +40,6 @@ public class RoomFinderUpdateDto {
     private Boolean identityVerified;  // from RoomFinder.idVerified (or false if not present)
 
     private String schoolEmail;
+
+    private MatchStatus status;
 }

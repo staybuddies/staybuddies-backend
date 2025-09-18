@@ -24,9 +24,11 @@ public class QuizDualStoreService {
     private final QuizResponseRepository responseRepo;
     private final RoomFinderQuizRepository quizRepo;
 
-    /** Read: prefer QuizResponse (list) and fallback to RoomFinderQuiz (q1..q10). */
+    /**
+     * Read: prefer the latest QuizResponse row; fall back to RoomFinderQuiz (q1..q10).
+     */
     public QuizDto getForUser(String email) {
-        return responseRepo.findByRoomFinderEmail(email)
+        return responseRepo.findTopByRoomFinderEmailOrderByIdDesc(email)
                 .map(this::toDto)
                 .or(() -> quizRepo.findByRoomFinderEmail(email).map(this::toDto))
                 .orElseGet(() -> {
@@ -37,16 +39,18 @@ public class QuizDualStoreService {
                 });
     }
 
-    /** Write: validate once, then upsert BOTH stores atomically. */
+    /**
+     * Write: validate once, then upsert BOTH stores atomically.
+     */
     @Transactional
     public QuizDto saveForUser(String email, QuizSubmissionDto req) {
-        var answers = validateAnswers(req);
+        var answers = validateAnswers(req); // exactly 10, each 1..5
 
         RoomFinder user = roomFinderRepo.findByEmail(email)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found: " + email));
 
-        // 1) Upsert canonical list store
-        QuizResponse resp = responseRepo.findByRoomFinderEmail(email)
+        // 1) Upsert canonical list store (latest row, or create first one)
+        QuizResponse resp = responseRepo.findTopByRoomFinderEmailOrderByIdDesc(email)
                 .orElseGet(() -> {
                     var r = new QuizResponse();
                     r.setRoomFinder(user);
@@ -104,7 +108,15 @@ public class QuizDualStoreService {
     }
 
     private void setQ1toQ10(RoomFinderQuiz q, List<Integer> a) {
-        q.setQ1(a.get(0));  q.setQ2(a.get(1));  q.setQ3(a.get(2));  q.setQ4(a.get(3));  q.setQ5(a.get(4));
-        q.setQ6(a.get(5));  q.setQ7(a.get(6));  q.setQ8(a.get(7));  q.setQ9(a.get(8));  q.setQ10(a.get(9));
+        q.setQ1(a.get(0));
+        q.setQ2(a.get(1));
+        q.setQ3(a.get(2));
+        q.setQ4(a.get(3));
+        q.setQ5(a.get(4));
+        q.setQ6(a.get(5));
+        q.setQ7(a.get(6));
+        q.setQ8(a.get(7));
+        q.setQ9(a.get(8));
+        q.setQ10(a.get(9));
     }
 }

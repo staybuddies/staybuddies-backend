@@ -8,11 +8,15 @@ import java.util.List;
 import java.util.Optional;
 
 public interface QuizResponseRepository extends JpaRepository<QuizResponse, Long> {
-    Optional<QuizResponse> findByRoomFinderEmail(String email);
+        Optional<QuizResponse> findByRoomFinderEmail(String email);
 
     @EntityGraph(attributePaths = {"roomFinder","answers"})
     List<QuizResponse> findAll();
-
     Optional<QuizResponse> findByRoomFinder_Id(Long id);
 
+    // Useful in other places (e.g., public profile lookups)
+    Optional<QuizResponse> findTopByRoomFinder_IdOrderByIdDesc(Long userId);
+    Optional<QuizResponse> findTopByRoomFinderEmailOrderByIdDesc(String email);
+
 }
+

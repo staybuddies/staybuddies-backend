@@ -7,7 +7,7 @@ import com.example.SP.senior_project.dto.roomfinder.RoomFinderUpdateDto;
 import com.example.SP.senior_project.model.RoomFinder;
 import org.mapstruct.*;
 
-import java.time.LocalTime;
+        import java.time.LocalTime;
 
 @Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
 public interface RoomFinderMapper {

@@ -14,7 +14,6 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 @RequestMapping("/api/v1/room-finder/me/quiz")
 public class QuizController {
-
     private final QuizDualStoreService quizService;
 
     @GetMapping
@@ -34,15 +33,5 @@ public class QuizController {
                           @RequestBody QuizSubmissionDto req) {
         return quizService.saveForUser(ud.getUsername(), req);
     }
-
-    @GetMapping("/room-finder/me/quiz")
-    public QuizDto getMine(@AuthenticationPrincipal UserDetails ud) {
-        return quizService.getForUser(ud.getUsername());
-    }
-
-    @PostMapping("/room-finder/me/quiz")
-    public QuizDto saveMine(@AuthenticationPrincipal UserDetails ud,
-                            @RequestBody QuizSubmissionDto req) {
-        return quizService.saveForUser(ud.getUsername(), req);
-    }
 }
+

@@ -16,8 +16,6 @@ public class QuizInsightsController {
 
     @GetMapping("/insights")
     public QuizInsightsDto myInsights(@AuthenticationPrincipal UserDetails ud) {
-
         return svc.insightsFor(ud.getUsername());
-
     }
 }

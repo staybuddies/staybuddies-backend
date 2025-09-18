@@ -25,7 +25,7 @@ public class MlClient {
 
     private final RestTemplate mlRestTemplate;
 
-    @Value("${ml.service.url}")           // e.g. http://192.168.1.20:8000
+    @Value("${ml.service.url}")
     private String mlBase;
 
     @Value("${ml.service.path:/analyze}") // must match FastAPI (default /analyze)

@@ -1,5 +1,6 @@
 package com.example.SP.senior_project.dto.roomfinder;
 
+import com.example.SP.senior_project.model.constant.MatchStatus;
 import lombok.Data;
 
 
@@ -24,4 +25,5 @@ public class RoomFinderDto {
 
     private String schoolEmail;
     private boolean schoolEmailVerified;
+    private MatchStatus status;
 }
