@@ -8,9 +8,10 @@ import java.time.LocalDateTime;
 @Entity
 @Data
 @Table(name = "match_requests",
-        uniqueConstraints = @UniqueConstraint(columnNames = {"requester_id","target_id"}))
+        uniqueConstraints = @UniqueConstraint(columnNames = {"requester_id", "target_id"}))
 public class MatchRequest {
-    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
@@ -28,6 +29,6 @@ public class MatchRequest {
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt = LocalDateTime.now();
 
-    public enum Status { PENDING, ACCEPTED, DECLINED }
+    public enum Status {PENDING, ACCEPTED, DECLINED}
 }
 

@@ -1,52 +1,157 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org" lang="en">
 <head>
-    <meta charset="UTF-8">
+    <meta charset="UTF-8"/>
     <title>Admin • Dashboard</title>
-    <link rel="stylesheet" th:href="@{/css/styles.css}">
-    <link rel="stylesheet" th:href="@{/css/admin-dashboard.css}">
+
+    <!-- Your base styles -->
+    <link rel="stylesheet" th:href="@{/css/styles.css}"/>
+    <link rel="stylesheet" th:href="@{/css/admin-dashboard.css}"/>
+
+    <!-- Chart.js (no defer; we'll attach an onload handler below) -->
+    <script id="chartjs-loader"
+            src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+    <style>
+        /* make sure the chart is visible even if outer CSS changes */
+        .chart-wrap canvas {
+            width: 100% !important;
+            height: 320px !important;
+        }
+    </style>
 </head>
-<body>
+
+<body class="admin-bg">
 <div class="layout">
+    <!-- Sidebar -->
     <div th:replace="fragments/sidebar :: sidebar"></div>
 
-    <main class="content">
-        <header class="page-header">
-            <h1>Dashboard</h1>
+    <!-- Main content area (has left margin in your global CSS) -->
+    <main class="main content">
+        <!-- Header -->
+        <header class="dashboard-header">
+            <div class="header-row">
+                <h1 class="title">Admin Dashboard</h1>
+                <form th:action="@{/admin/dashboard}" method="get" class="range-form">
+                    <select name="range" class="select">
+                        <option th:value="WEEK" th:selected="${range=='WEEK'}">This Week</option>
+                        <option th:value="MONTH" th:selected="${range=='MONTH'}">This Month</option>
+                        <option th:value="QUARTER" th:selected="${range=='QUARTER'}">This Quarter</option>
+                        <option th:value="YEAR" th:selected="${range=='YEAR'}">This Year</option>
+                    </select>
+                    <button class="btn btn-ghost" type="submit">Apply</button>
+                </form>
+            </div>
+            <p class="subtitle">Welcome back! Here's what's happening with RoommateMatch today.</p>
+
+            <!-- Optional flash messages -->
+            <div class="alerts">
+                <div class="alert success" th:if="${success}" th:text="${success}"></div>
+                <div class="alert error" th:if="${error}" th:text="${error}"></div>
+            </div>
         </header>
 
-        <section class="alerts">
-            <div class="alert success" th:if="${success}" th:text="${success}"></div>
-            <div class="alert error" th:if="${error}" th:text="${error}"></div>
+        <!-- KPI cards -->
+        <section class="cards">
+            <article class="card kpi">
+                <div class="stats-top"></div>
+                <h3>Total Users</h3>
+                <p th:text="${totalUsers}">0</p>
+                <small class="muted" th:text="${totalUsersDelta}">+0% from last month</small>
+            </article>
+
+            <article class="card kpi">
+                <div class="stats-top"></div>
+                <h3>Active Users</h3>
+                <p th:text="${activeUsers}">0</p>
+                <small class="muted" th:text="${activeUsersNote}">0% of total users</small>
+            </article>
+
+            <article class="card kpi">
+                <div class="stats-top"></div>
+                <h3>Matches Made</h3>
+                <p th:text="${matchesMade}">0</p>
+                <small class="muted" th:text="${matchRateNote}">0% match rate</small>
+            </article>
+
+            <article class="card kpi">
+                <div class="stats-top"></div>
+                <h3>New Users Today</h3>
+                <p th:text="${newUsersToday}">0</p>
+                <small class="muted" th:text="${newUsersDelta}">+0% from yesterday</small>
+            </article>
         </section>
 
-        <section class="stats-grid">
-            <div class="stat-card">
-                <div class="label">Total Admins</div>
-                <div class="value" th:text="${totalAdmins}">0</div>
+        <!-- User Growth -->
+        <section class="panel growth-panel">
+            <div class="panel-head">
+                <h2>User Growth</h2>
+                <form th:action="@{/admin/dashboard}" method="get" class="range-form">
+                    <select name="range" class="select">
+                        <option th:value="WEEK" th:selected="${range=='WEEK'}">This Week</option>
+                        <option th:value="MONTH" th:selected="${range=='MONTH'}">This Month</option>
+                        <option th:value="QUARTER" th:selected="${range=='QUARTER'}">This Quarter</option>
+                        <option th:value="YEAR" th:selected="${range=='YEAR'}">This Year</option>
+                    </select>
+                    <button class="btn btn-ghost" type="submit">Apply</button>
+                </form>
             </div>
-            <div class="stat-card">
-                <div class="label">New Reports</div>
-                <div class="value" th:text="${newReports}">0</div>
-            </div>
-            <div class="stat-card">
-                <div class="label">Active Conversations</div>
-                <div class="value" th:text="${activeConvos}">0</div>
-            </div>
-        </section>
 
-        <section class="panel">
-            <h2>Quick Links</h2>
-            <div class="quick-links">
-                <a class="btn" th:href="@{/admin/users}">User Management</a>
-                <a class="btn" th:href="@{/admins}">Admin Management</a>
-                <a class="btn" th:href="@{/admin/reports}">Report & Moderation</a>
-                <a class="btn" th:href="@{/admin/messages}">Message & Monitoring</a>
-                <a class="btn" th:href="@{/admin/analytics}">Analytics</a>
-                <a class="btn" th:href="@{/admin/settings}">System Settings</a>
+            <div class="chart-wrap">
+                <canvas id="growthChart"></canvas>
+            </div>
+
+            <div class="panel-actions">
+                <a class="btn btn-primary" th:href="@{/admin/analytics}">⬇ Download Report</a>
             </div>
         </section>
     </main>
 </div>
+
+<!-- Inline data + robust chart bootstrap -->
+<script th:inline="javascript">
+    /*<![CDATA[*/
+    const growthLabels = /*[[${growthLabels}]]*/ [];
+    const growthValues = /*[[${growthValues}]]*/ [];
+
+    // Render function (idempotent)
+    function renderGrowthChart() {
+        const el = document.getElementById('growthChart');
+        if (!el || !window.Chart) return;
+
+        // if already drawn, skip
+        if (el.__chart) return;
+
+        el.__chart = new Chart(el, {
+            type: 'line',
+            data: {
+                labels: growthLabels,
+                datasets: [{
+                    label: 'New users',
+                    data: growthValues,
+                    tension: 0.35,
+                    fill: false
+                }]
+            },
+            options: {
+                plugins: {legend: {display: false}},
+                scales: {
+                    x: {grid: {display: false}},
+                    y: {beginAtZero: true, ticks: {precision: 0}}
+                }
+            }
+        });
+    }
+
+    // 1) When DOM is ready, try (Chart.js may already be there)
+    document.addEventListener('DOMContentLoaded', renderGrowthChart);
+
+    // 2) If Chart.js loads later, run again
+    const chartLoader = document.getElementById('chartjs-loader');
+    if (chartLoader) {
+        chartLoader.addEventListener('load', renderGrowthChart);
+    }
+    /*]]>*/
+</script>
 </body>
 </html>
