@@ -1,7 +1,9 @@
+// src/main/java/com/example/SP/senior_project/service/PushNotificationService.java
 package com.example.SP.senior_project.service;
 
 import com.example.SP.senior_project.model.Message;
 import com.example.SP.senior_project.model.RoomFinder;
+import com.example.SP.senior_project.model.constant.NoticeType;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -16,27 +18,19 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class PushNotificationService {
 
-    private final SimpMessagingTemplate broker;   // STOMP broker
-    private final FirebaseFacade firebase;        // optional (may no-op if not configured)
+    private final SimpMessagingTemplate broker;
+    private final FirebaseFacade firebase;
+    private final NotificationService notiSvc;
 
-    /**
-     * Broadcasts a newly-saved message to:
-     * - /topic/threads/{threadId}                 (live chat stream for the open thread)
-     * - /user/{receiverEmail}/queue/notice        (best: per-user queue, requires Principal.name=email)
-     * - /topic/notice.user-{receiverId}           (fallback: id-keyed public topic, no Principal needed)
-     * - FCM (optional)
-     */
+    /* -------------------- Message (existing) -------------------- */
     public void notifyNewMessage(RoomFinder receiver,
                                  RoomFinder sender,
                                  Long threadId,
                                  Message m) {
-
-        // Stable ISO-8601 timestamp (UTC)
         final String iso = (m.getCreatedAt() == null)
                 ? OffsetDateTime.now(ZoneOffset.UTC).toString()
                 : m.getCreatedAt().atOffset(ZoneOffset.UTC).toString();
 
-        // Full event payload used by the chat stream
         final Map<String, Object> evt = Map.of(
                 "type", "MESSAGE",
                 "threadId", threadId,
@@ -46,51 +40,85 @@ public class PushNotificationService {
                 "time", iso
         );
 
-        // 1) Broadcast to the thread stream so both ends see the message instantly
-        try {
-            broker.convertAndSend("/topic/threads/" + threadId, evt);
-            log.debug("WS -> /topic/threads/{} (msgId={})", threadId, m.getId());
-        } catch (Exception ex) {
-            log.warn("WS thread broadcast failed", ex);
-        }
+        // Thread stream
+        safe(() -> broker.convertAndSend("/topic/threads/" + threadId, evt));
 
-        // 2) Per-user queue (BEST): requires Principal.name to be the user's email on the WS session
-        final String receiverEmail = safeTrim(receiver.getEmail());
-        if (!receiverEmail.isEmpty()) {
-            try {
-                broker.convertAndSendToUser(
-                        receiverEmail,
-                        "/queue/notice",
-                        Map.of("type", "MESSAGE", "threadId", threadId)
-                );
-                log.debug("WS -> /user/{}/queue/notice", receiverEmail);
-            } catch (Exception ex) {
-                log.debug("WS user queue failed (no Principal or different name?), falling back to id-topic");
-            }
-        } else {
-            log.debug("Receiver email empty; skipping /user queue, using id-topic fallback only.");
-        }
+        // Per-user queue (best)
+        safe(() -> broker.convertAndSendToUser(
+                safeTrim(receiver.getEmail()), "/queue/notice", Map.of("type", "MESSAGE", "threadId", threadId)));
 
-        // 3) Fallback public topic keyed by numeric user id (works without WS Principal)
-        try {
-            broker.convertAndSend(
-                    "/topic/notice.user-" + receiver.getId(),
-                    Map.of("type", "MESSAGE", "threadId", threadId)
-            );
-            log.debug("WS -> /topic/notice.user-{}", receiver.getId());
-        } catch (Exception ex) {
-            log.warn("WS notice fallback failed", ex);
-        }
+        // Fallback public topic
+        safe(() -> broker.convertAndSend("/topic/notice.user-" + receiver.getId(),
+                Map.of("type", "MESSAGE", "threadId", threadId)));
 
-        // 4) Optional FCM
-        try {
-            firebase.sendNewMessagePush(receiver, sender, m.getContent());
-        } catch (Exception ex) {
-            log.warn("FCM send failed (non-fatal): {}", ex.getMessage());
-        }
+        // Persist + FCM
+        var n = notiSvc.saveNotice(receiver, NoticeType.MESSAGE, threadId, sender,
+                sender.getName(), m.getContent());
+        firebase.sendNewMessagePush(receiver, sender, m.getContent(), threadId);
+        log.debug("Notice saved MESSAGE id={}", n.getId());
     }
 
+    /* -------------------- Match requested -------------------- */
+    public void notifyMatchRequested(RoomFinder target, RoomFinder requester) {
+        String title = "New match request";
+        String body = (requester != null && requester.getName() != null)
+                ? requester.getName() + " sent you a match request"
+                : "You have a new match request";
+
+        // Persist
+        var n = notiSvc.saveNotice(target, NoticeType.MATCH_REQUESTED, null, requester, title, body);
+
+        // WS user queue + fallback topic
+        var payload = Map.of(
+                "id", n.getId(),
+                "type", "MATCH_REQUESTED",
+                "fromUserId", requester == null ? null : requester.getId(),
+                "fromName", requester == null ? null : requester.getName(),
+                "title", title,
+                "body", body,
+                "createdAt", n.getCreatedAt().toString()
+        );
+        safe(() -> broker.convertAndSendToUser(safeTrim(target.getEmail()), "/queue/notice", payload));
+        safe(() -> broker.convertAndSend("/topic/notice.user-" + target.getId(), payload));
+
+        // FCM
+        firebase.sendMatchRequestPush(target, requester);
+    }
+
+
+    /* -------------------- Match accepted -------------------- */
+    public void notifyMatchAccepted(RoomFinder requester, RoomFinder target) {
+        String title = "Request accepted";
+        String body = (target != null && target.getName() != null)
+                ? target.getName() + " accepted your match request"
+                : "Your match request was accepted";
+
+        var n = notiSvc.saveNotice(requester, NoticeType.MATCH_ACCEPTED, null, target, title, body);
+
+        var payload = Map.of(
+                "id", n.getId(),
+                "type", "MATCH_ACCEPTED",
+                "fromUserId", target == null ? null : target.getId(),
+                "fromName", target == null ? null : target.getName(),
+                "title", title,
+                "body", body,
+                "createdAt", n.getCreatedAt().toString()
+        );
+        safe(() -> broker.convertAndSendToUser(safeTrim(requester.getEmail()), "/queue/notice", payload));
+        safe(() -> broker.convertAndSend("/topic/notice.user-" + requester.getId(), payload));
+
+        firebase.sendMatchAcceptedPush(requester, target);
+    }
+
+    /* -------------------- util -------------------- */
     private static String safeTrim(String s) {
         return s == null ? "" : s.trim();
+    }
+
+    private static void safe(Runnable r) {
+        try {
+            r.run();
+        } catch (Exception ignored) {
+        }
     }
 }

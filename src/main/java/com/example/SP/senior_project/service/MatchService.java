@@ -27,17 +27,10 @@ public class MatchService {
     private final MatchRequestRepository reqRepo;
     private final MessageService messageService;
 
+    // ⬇️ NEW: push publisher (WS + FCM + persisted notice)
+    private final PushNotificationService pushSvc;
+
     // ---- Quiz indices (align with your current Quiz/QuizEdit screens) ----
-    // 0: Bedtime
-    // 1: Cleanliness
-    // 2: Noise sensitivity
-    // 3: Guests frequency
-    // 4: Pets tolerance
-    // 5: Smoking tolerance
-    // 6: Communication comfort
-    // 7: Schedule alignment importance
-    // 8: Budget (THB bracket)
-    // 9: Nationality / region
     private static final int Q_BEDTIME = 0;
     private static final int Q_CLEAN   = 1;
     private static final int Q_NOISE   = 2;
@@ -52,11 +45,9 @@ public class MatchService {
     // ---- Weights (budget & nationality highest) ----
     private static final double W_BUDGET = 4.0;
     private static final double W_NATION = 3.5;
-
     private static final double W_SMOKE  = 3.0;
     private static final double W_CLEAN  = 2.5;
     private static final double W_COMM   = 2.0;
-
     private static final double W_NOISE  = 1.5;
     private static final double W_SLEEP  = 1.5;
     private static final double W_ALIGN  = 1.2;
@@ -103,12 +94,7 @@ public class MatchService {
                             case ACCEPTED -> {
                                 m.setRelationStatus("ACCEPTED");
                                 Long threadId = messageService.findExistingThreadId(me.getId(), u.getId());
-                                // setThreadId only if your DTO has it
-                                try {
-                                    m.setThreadId(threadId);
-                                } catch (NoSuchMethodError | Exception ignored) {
-                                    // DTO may not have threadId; ignore if absent
-                                }
+                                try { m.setThreadId(threadId); } catch (NoSuchMethodError | Exception ignored) {}
                             }
                             case DECLINED -> m.setRelationStatus("DECLINED");
                         }
@@ -137,7 +123,13 @@ public class MatchService {
         r.setRequester(me);
         r.setTarget(target);
         r.setStatus(MatchRequest.Status.PENDING);
-        return reqRepo.save(r).getId();
+        Long id = reqRepo.save(r).getId();
+
+        // 🔔 NEW: notify target (WS + FCM + persisted notice)
+        // wrapped in try so a push failure never blocks the flow
+        try { pushSvc.notifyMatchRequested(target, me); } catch (Exception ignored) {}
+
+        return id;
     }
 
     @Transactional
@@ -151,6 +143,9 @@ public class MatchService {
 
         // ensure chat thread exists
         messageService.ensureThread(req.getRequester().getId(), req.getTarget().getId());
+
+        // 🔔 NEW: notify requester that the target accepted
+        try { pushSvc.notifyMatchAccepted(req.getRequester(), req.getTarget()); } catch (Exception ignored) {}
     }
 
     @Transactional
@@ -161,27 +156,21 @@ public class MatchService {
         }
         req.setStatus(MatchRequest.Status.DECLINED);
         reqRepo.save(req);
+        // (optional) pushSvc.notifyMatchDeclined(req.getRequester(), req.getTarget());
     }
 
     /* ----------------- Scoring helpers ----------------- */
-
     private int hybridScore10(List<Integer> a, List<Integer> b) {
         List<Integer> A = padTo10(a);
         List<Integer> B = padTo10(b);
-
-        // Deal breakers
         if (isDealBreaker(A, B)) return 0;
 
-        double total = 0.0;
-        double wsum  = 0.0;
-
-        total += factor(A, B, Q_BUDGET)  * W_BUDGET;  wsum += W_BUDGET;   // highest
-        total += factor(A, B, Q_NATION)  * W_NATION;  wsum += W_NATION;   // highest
-
+        double total = 0.0, wsum = 0.0;
+        total += factor(A, B, Q_BUDGET)  * W_BUDGET;  wsum += W_BUDGET;
+        total += factor(A, B, Q_NATION)  * W_NATION;  wsum += W_NATION;
         total += factor(A, B, Q_SMOKE)   * W_SMOKE;   wsum += W_SMOKE;
         total += factor(A, B, Q_CLEAN)   * W_CLEAN;   wsum += W_CLEAN;
         total += factor(A, B, Q_COMM)    * W_COMM;    wsum += W_COMM;
-
         total += asymNoise(A, B)         * W_NOISE;   wsum += W_NOISE;
         total += factor(A, B, Q_BEDTIME) * W_SLEEP;   wsum += W_SLEEP;
         total += factor(A, B, Q_ALIGN)   * W_ALIGN;   wsum += W_ALIGN;
@@ -189,30 +178,18 @@ public class MatchService {
         total += asymGuests(A, B)        * W_GUEST;   wsum += W_GUEST;
 
         int score = (int) Math.round((total / Math.max(1.0, wsum)) * 100.0);
-        if (score < 0) score = 0;
-        if (score > 100) score = 100;
-        return score;
+        return Math.min(100, Math.max(0, score));
     }
 
     private boolean isDealBreaker(List<Integer> a, List<Integer> b) {
-        // Strict non-smoker vs tolerant smoker (e.g., 5 vs <=2)
         if ((val(a, Q_SMOKE) >= 5 && val(b, Q_SMOKE) <= 2) ||
-                (val(b, Q_SMOKE) >= 5 && val(a, Q_SMOKE) <= 2)) {
-            return true;
-        }
-        // Cleanliness extreme diff at a pole
+                (val(b, Q_SMOKE) >= 5 && val(a, Q_SMOKE) <= 2)) return true;
         if (Math.abs(val(a, Q_CLEAN) - val(b, Q_CLEAN)) >= 3 &&
-                (val(a, Q_CLEAN) == 5 || val(b, Q_CLEAN) == 5)) {
-            return true;
-        }
-        // Bedtime extreme mismatch (e.g., 5 vs 1)
-        if (Math.abs(val(a, Q_BEDTIME) - val(b, Q_BEDTIME)) == 4) {
-            return true;
-        }
+                (val(a, Q_CLEAN) == 5 || val(b, Q_CLEAN) == 5)) return true;
+        if (Math.abs(val(a, Q_BEDTIME) - val(b, Q_BEDTIME)) == 4) return true;
         return false;
     }
 
-    /** Symmetric factor: returns 1.0 (perfect) down to 0.1 (very poor). */
     private double factor(List<Integer> a, List<Integer> b, int idx) {
         int diff = Math.abs(val(a, idx) - val(b, idx));
         if (diff == 0) return 1.00;
@@ -222,7 +199,6 @@ public class MatchService {
         return 0.10;
     }
 
-    /** Asymmetric noise tolerance: accommodates quiet preference. */
     private double asymNoise(List<Integer> a, List<Integer> b) {
         int x = val(a, Q_NOISE), y = val(b, Q_NOISE);
         if (Math.abs(x - y) <= 1) return 1.0;
@@ -230,7 +206,6 @@ public class MatchService {
         return 0.4;
     }
 
-    /** Asymmetric guests frequency: large mismatch penalized more. */
     private double asymGuests(List<Integer> a, List<Integer> b) {
         int x = val(a, Q_GUESTS), y = val(b, Q_GUESTS);
         int diff = Math.abs(x - y);
@@ -244,7 +219,7 @@ public class MatchService {
         List<Integer> out = new ArrayList<>(10);
         for (int i = 0; i < 10; i++) {
             Integer v = (i < src.size()) ? src.get(i) : null;
-            out.add(v == null ? 3 : v); // neutral default
+            out.add(v == null ? 3 : v);
         }
         return out;
     }
